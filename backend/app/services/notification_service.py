@@ -1,4 +1,4 @@
-"""Email notifications. No-ops unless ENABLE_EMAIL_NOTIFICATIONS=true; never raises into a request."""
+"""Email notifications. No-ops unless ENABLE_EMAIL_NOTIFICATIONS=true; never raises."""
 import logging
 import smtplib
 from email.message import EmailMessage
