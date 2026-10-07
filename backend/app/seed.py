@@ -33,6 +33,51 @@ SEED = {
     "HR-Initiated": ["Employee onboarding", "Offboarding", "Department transfer"],
 }
 
+T = "text"
+LONG = "textarea"
+DATE = "date"
+NUM = "number"
+
+
+def _f(name, label, type_=T, options=None):
+    field = {"name": name, "label": label, "type": type_}
+    if options:
+        field["options"] = options
+    return field
+
+
+EXTRA_FIELDS = {
+    "Service Request": [
+        _f("affected_user", "Affected user / system"),
+        _f("department", "Department"),
+        _f("start_date", "Start date (new accounts)", DATE),
+        _f("software_name", "Software / app name"),
+        _f("justification", "Business justification", LONG),
+    ],
+    "Incident": [
+        _f("affected_system", "Affected system / app"),
+        _f("error_message", "Error code / message"),
+        _f("users_impacted", "Number of users impacted", NUM),
+        _f("severity", "Severity", "select", ["critical", "high", "medium", "low"]),
+        _f("department", "Department"),
+    ],
+    "Maintenance": [
+        _f("equipment_name", "System / equipment name"),
+        _f("scheduled_date", "Scheduled date", DATE),
+        _f("estimated_downtime", "Estimated downtime"),
+        _f("affected_departments", "Affected departments"),
+        _f("maintenance_window", "Maintenance window preference"),
+    ],
+    "HR-Initiated": [
+        _f("employee_name", "Employee name"),
+        _f("effective_date", "Start / end date", DATE),
+        _f("department", "Department (current / new)"),
+        _f("equipment_needed", "Equipment needed (laptop, phone, keys...)", LONG),
+        _f("manager_name", "Manager name"),
+        _f("role", "Role"),
+    ],
+}
+
 
 def seed_categories(db: Session) -> None:
     """Idempotent: skips categories that already exist."""
@@ -42,10 +87,19 @@ def seed_categories(db: Session) -> None:
             cat = TicketCategory(name=cat_name, order=order)
             db.add(cat)
             db.flush()
-        existing = {s.name for s in cat.subcategories}
+        existing = {s.name: s for s in cat.subcategories}
         for i, sub in enumerate(subs, start=1):
             if sub not in existing:
-                db.add(TicketSubcategory(category_id=cat.id, name=sub, order=i))
+                db.add(
+                    TicketSubcategory(
+                        category_id=cat.id,
+                        name=sub,
+                        order=i,
+                        extra_fields_template={"fields": EXTRA_FIELDS[cat_name]},
+                    )
+                )
+            elif not existing[sub].extra_fields_template:
+                existing[sub].extra_fields_template = {"fields": EXTRA_FIELDS[cat_name]}
     db.commit()
 
 

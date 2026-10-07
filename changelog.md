@@ -11,7 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FastAPI scaffold, SQLAlchemy models, Alembic environment, mock auth (`AUTH_MODE=mock`)
 - Ticket CRUD, status flow (admin transitions, user reopen within window), comments with
   internal notes, attachments (type/size validated), history audit log, categories, admin dashboard
-- Category seed (`make seed`); 33 pytest tests, ~94% coverage
+- Category seed (`make seed`) with per-subcategory extra-field templates; `GET /me`;
+  34 pytest tests, ~94% coverage
+
+### Added (Milestone 1.3 frontend)
+- React + TypeScript + Vite app: mock-auth sign-in, Submit Ticket form with dynamic extra fields
+  and attachments, My Tickets (status filter, search, pagination), Ticket Detail (reopen,
+  attachments, comment thread); 10 Vitest tests; verified end-to-end in a browser
 
 ### Planning
 - MVP Phase 1 specifications complete

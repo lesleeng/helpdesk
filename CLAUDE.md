@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Start
 
 **Project:** Internal IT Help Desk Module  
-**Status:** MVP planning phase (no code yet)  
+**Status:** MVP in development (backend API + user-facing frontend implemented; admin pages next)  
 **Stack:** React (frontend) + Python FastAPI (backend) + PostgreSQL (database)  
 **Documentation:** See `project_spec.md` for full requirements and architecture
 
@@ -236,7 +236,7 @@ See `project_spec.md` API section for complete list.
 **Frontend:**
 - **Style:** ESLint + Prettier
 - **Language:** TypeScript (strict mode)
-- **Testing:** Jest + React Testing Library
+- **Testing:** Vitest (Jest-compatible API) + React Testing Library
 - **Component naming:** PascalCase, files match component name
 
 ## When to Update Auto-Updated Docs

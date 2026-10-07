@@ -2,9 +2,9 @@
 
 **Last Updated:** October 7, 2026  
 **Current Phase:** MVP Development  
-**Next Milestone:** 1.3 Frontend & User Pages (Weeks 6-8)
+**Next Milestone:** 1.4 Admin Pages & Launch (Weeks 9-10)
 
-> Milestone 1.1 (DB/models/mock auth) and 1.2 (backend API) are implemented on branch
+> Milestones 1.1 (DB/models/mock auth), 1.2 (backend API) and 1.3 (frontend user pages) are implemented on branch
 > `claude/awesome-knuth-exyhqw`. Open items: generate the initial Alembic migration against a real
 > PostgreSQL instance; swap `AUTH_MODE=production` once workmate's auth details arrive.
 

@@ -204,3 +204,11 @@ def test_dashboard(client, seeded, auth_headers, admin_auth_headers):
     assert d["by_category"] == {seeded.name: 2}
     assert d["avg_resolution_hours"] is not None
     assert client.get(f"{BASE}/dashboard", headers=auth_headers).status_code == 403
+
+
+def test_me_and_extra_field_templates(client, seeded, auth_headers):
+    me = client.get(f"{BASE}/me", headers=auth_headers).json()
+    assert me["id"] == "user-1" and me["role"] == "user"
+    subs = client.get(f"{BASE}/categories/{seeded.id}/subcategories", headers=auth_headers).json()
+    fields = subs[0]["extra_fields_template"]["fields"]
+    assert {"name", "label", "type"} <= set(fields[0])

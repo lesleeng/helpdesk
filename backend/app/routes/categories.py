@@ -42,3 +42,8 @@ def list_subcategories(
 @router.get("/dashboard", response_model=DashboardOut)
 def dashboard(db: Session = Depends(get_db), _: Dict[str, Any] = Depends(require_admin)):
     return dashboard_stats(db)
+
+
+@router.get("/me")
+def me(user: Dict[str, Any] = Depends(get_current_user)):
+    return user
