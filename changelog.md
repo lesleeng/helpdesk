@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bulk actions (`POST /tickets/bulk`, partial failures reported), advanced filters
   (priority, assignee, unassigned, date range), `GET /reports`, `GET /staff`
 - Email notifications (created, status change, comment, assignment) via SMTP background tasks,
-  off unless `EMAIL_ENABLED=true`; migration 0002 (backfills SLA dates, verified on PostgreSQL 16)
+  off unless `ENABLE_EMAIL_NOTIFICATIONS=true`; migration 0002 (backfills SLA dates, verified on PostgreSQL 16)
 - 58 pytest tests, ~95% coverage
 
 ### Added (Milestone 1.4 admin + launch prep)

@@ -1,4 +1,4 @@
-"""Email notifications. No-ops unless EMAIL_ENABLED=true; never raises into a request."""
+"""Email notifications. No-ops unless ENABLE_EMAIL_NOTIFICATIONS=true; never raises into a request."""
 import logging
 import smtplib
 from email.message import EmailMessage
@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 def send_email(to: str, subject: str, body: str) -> None:
     msg = EmailMessage()
-    msg["From"] = settings.EMAIL_FROM
+    msg["From"] = settings.SMTP_FROM_ADDRESS
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
     try:
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as smtp:
+        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as smtp:
             if settings.SMTP_STARTTLS:
                 smtp.starttls()
             if settings.SMTP_USER:
@@ -41,7 +41,7 @@ def _queue(
     body: str,
     exclude: Optional[str] = None,
 ) -> None:
-    if not settings.EMAIL_ENABLED:
+    if not settings.ENABLE_EMAIL_NOTIFICATIONS:
         return
     for uid in dict.fromkeys(u for u in user_ids if u and u != exclude):
         user = directory.get_user(uid)

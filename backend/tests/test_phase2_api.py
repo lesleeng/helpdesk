@@ -295,7 +295,7 @@ def outbox(monkeypatch):
     monkeypatch.setattr(
         notify_mod, "send_email", lambda to, subject, body: sent.append((to, subject))
     )
-    monkeypatch.setattr(settings, "EMAIL_ENABLED", True)
+    monkeypatch.setattr(settings, "ENABLE_EMAIL_NOTIFICATIONS", True)
     return sent
 
 

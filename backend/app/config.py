@@ -47,13 +47,15 @@ class Settings(BaseSettings):
     )
 
     # Email notifications (disabled by default)
-    EMAIL_ENABLED: bool = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "localhost")
+    ENABLE_EMAIL_NOTIFICATIONS: bool = (
+        os.getenv("ENABLE_EMAIL_NOTIFICATIONS", "false").lower() == "true"
+    )
+    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "localhost")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "25"))
     SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
     SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
     SMTP_STARTTLS: bool = os.getenv("SMTP_STARTTLS", "false").lower() == "true"
-    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "helpdesk@localhost")
+    SMTP_FROM_ADDRESS: str = os.getenv("SMTP_FROM_ADDRESS", "helpdesk@localhost")
     APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:5173")
 
     # Ticket Settings
