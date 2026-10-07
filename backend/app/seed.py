@@ -1,10 +1,10 @@
 """Seed the 4 request categories and their subcategories.
 
-Usage: python -m app.seed
+Usage: python -m app.seed  (run `alembic upgrade head` first)
 """
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal, create_tables
+from app.database import SessionLocal
 from app.models.category import TicketCategory, TicketSubcategory
 
 SEED = {
@@ -104,7 +104,6 @@ def seed_categories(db: Session) -> None:
 
 
 if __name__ == "__main__":
-    create_tables()
     with SessionLocal() as session:
         seed_categories(session)
     print("Seeded categories")

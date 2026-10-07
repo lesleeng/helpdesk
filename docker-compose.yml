@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: helpdesk
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-helpdesk}
+      POSTGRES_DB: helpdesk_db
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U helpdesk -d helpdesk_db"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://helpdesk:${DB_PASSWORD:-helpdesk}@db:5432/helpdesk_db
+      AUTH_MODE: ${AUTH_MODE:-mock}
+      WORKMATE_AUTH_URL: ${WORKMATE_AUTH_URL:-}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      UPLOAD_DIR: /data/uploads
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  dbdata:
+  uploads:

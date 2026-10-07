@@ -212,3 +212,11 @@ def test_me_and_extra_field_templates(client, seeded, auth_headers):
     subs = client.get(f"{BASE}/categories/{seeded.id}/subcategories", headers=auth_headers).json()
     fields = subs[0]["extra_fields_template"]["fields"]
     assert {"name", "label", "type"} <= set(fields[0])
+
+
+def test_admin_mine_scope(client, seeded, auth_headers, admin_auth_headers):
+    make_ticket(client, auth_headers, seeded.id, title="Users")
+    make_ticket(client, admin_auth_headers, seeded.id, title="Admins own")
+    assert client.get(f"{BASE}/tickets", headers=admin_auth_headers).json()["total"] == 2
+    mine = client.get(f"{BASE}/tickets?mine=true", headers=admin_auth_headers).json()
+    assert [t["title"] for t in mine["items"]] == ["Admins own"]

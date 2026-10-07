@@ -28,12 +28,15 @@ def list_tickets(
     status_filter: Optional[TicketStatus] = Query(None, alias="status"),
     category_id: Optional[int] = None,
     search: Optional[str] = None,
+    mine: bool = False,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     user: Dict[str, Any] = Depends(get_current_user),
 ):
-    items, total = svc.list_tickets(db, user, status_filter, category_id, search, page, page_size)
+    items, total = svc.list_tickets(
+        db, user, status_filter, category_id, search, page, page_size, mine
+    )
     return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 

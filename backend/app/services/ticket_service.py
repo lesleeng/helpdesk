@@ -101,9 +101,10 @@ def list_tickets(
     search: Optional[str],
     page: int,
     page_size: int,
+    mine: bool = False,
 ) -> Tuple[List[Ticket], int]:
     q = db.query(Ticket)
-    if not is_admin(user):
+    if mine or not is_admin(user):
         q = q.filter(Ticket.user_id == user["id"])
     if status_filter:
         q = q.filter(Ticket.status == status_filter)
