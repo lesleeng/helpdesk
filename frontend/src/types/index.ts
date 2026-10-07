@@ -88,3 +88,22 @@ export interface TicketCreateInput {
   urgency: Urgency
   extra_fields: Record<string, string>
 }
+
+export interface HistoryEntry {
+  id: number
+  ticket_id: number
+  changed_by_id: string
+  field_name: string
+  old_value?: string | null
+  new_value?: string | null
+  change_type?: string | null
+  created_at: string
+}
+
+export interface Dashboard {
+  total: number
+  by_status: Record<string, number>
+  by_category: Record<string, number>
+  by_priority: Record<string, number>
+  avg_resolution_hours?: number | null
+}

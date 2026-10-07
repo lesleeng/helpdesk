@@ -2,7 +2,11 @@ import type {
   Attachment,
   Category,
   Comment,
+  Dashboard,
+  HistoryEntry,
+  Priority,
   Subcategory,
+  TicketStatus,
   Ticket,
   TicketCreateInput,
   TicketDetail,
@@ -76,15 +80,27 @@ export const api = {
   categories: () => request<Category[]>('/categories'),
   subcategories: (categoryId: number) =>
     request<Subcategory[]>(`/categories/${categoryId}/subcategories`),
-  listTickets: (params: { status?: string; search?: string; page?: number }) => {
+  listTickets: (params: {
+    status?: string
+    categoryId?: number
+    search?: string
+    mine?: boolean
+    page?: number
+  }) => {
     const q = new URLSearchParams()
     if (params.status) q.set('status', params.status)
+    if (params.categoryId) q.set('category_id', String(params.categoryId))
     if (params.search) q.set('search', params.search)
+    if (params.mine) q.set('mine', 'true')
     q.set('page', String(params.page ?? 1))
     return request<TicketList>(`/tickets?${q}`)
   },
   getTicket: (id: number) => request<TicketDetail>(`/tickets/${id}`),
   createTicket: (data: TicketCreateInput) => request<TicketDetail>('/tickets', json(data)),
+  updateTicket: (id: number, data: { status?: TicketStatus; priority?: Priority }) =>
+    request<Ticket>(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  history: (id: number) => request<HistoryEntry[]>(`/tickets/${id}/history`),
+  dashboard: () => request<Dashboard>('/dashboard'),
   reopenTicket: (id: number) => request<Ticket>(`/tickets/${id}/reopen`, { method: 'POST' }),
   listComments: (id: number) => request<Comment[]>(`/tickets/${id}/comments`),
   addComment: (id: number, content: string) =>

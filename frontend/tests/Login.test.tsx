@@ -10,7 +10,7 @@ describe('auth flow', () => {
   it('redirects unauthenticated users to login, then signs in', async () => {
     const calls = mockFetch({
       'GET /me': { id: 'user-1', name: 'John Smith', email: 'j@x', role: 'user' },
-      'GET /tickets?page=1': { items: [], total: 0, page: 1, page_size: 20 },
+      'GET /tickets?mine=true&page=1': { items: [], total: 0, page: 1, page_size: 20 },
     })
     renderApp(<App />, '/tickets')
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()

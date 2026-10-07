@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Start
 
 **Project:** Internal IT Help Desk Module  
-**Status:** MVP in development (backend API + user-facing frontend implemented; admin pages next)  
+**Status:** MVP feature-complete in development (backend API, user + admin frontend, migration, Docker files); remaining: workmate auth integration and deployment verification  
 **Stack:** React (frontend) + Python FastAPI (backend) + PostgreSQL (database)  
 **Documentation:** See `project_spec.md` for full requirements and architecture
 
@@ -64,6 +64,8 @@ helpdesk/
 │   ├── .env.local        # Local environment (DO NOT COMMIT)
 │   └── tsconfig.json
 │
+├── e2e/                  # Playwright smoke test (npm install && npm run smoke)
+├── docker-compose.yml    # db + backend + frontend (untested: needs Docker)
 ├── docs/                 # Additional documentation
 │   └── api.md            # API documentation (when built)
 │

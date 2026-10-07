@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and attachments, My Tickets (status filter, search, pagination), Ticket Detail (reopen,
   attachments, comment thread); 10 Vitest tests; verified end-to-end in a browser
 
+### Added (Milestone 1.4 admin + launch prep)
+- Admin UI: All Tickets (category/status/search filters, priority + submitter columns), status and
+  priority changes limited to allowed transitions, audit history, Dashboard with breakdown tables
+- `GET /tickets?mine=true` so admins' "My Tickets" lists only their own
+- Initial Alembic migration (verified on PostgreSQL 16: upgrade/downgrade/check)
+- Dockerfiles, nginx config, docker-compose (not yet run); Playwright smoke test in `e2e/`
+- 17 Vitest tests, 35 pytest tests
+
 ### Planning
 - MVP Phase 1 specifications complete
 - Database schema designed

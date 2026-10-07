@@ -10,6 +10,8 @@ export default function Layout() {
         <nav>
           <NavLink to="/tickets">My Tickets</NavLink>
           <NavLink to="/tickets/new">New Ticket</NavLink>
+          {user?.role === 'admin' && <NavLink to="/admin/tickets">All Tickets</NavLink>}
+          {user?.role === 'admin' && <NavLink to="/admin/dashboard">Dashboard</NavLink>}
         </nav>
         <span className="spacer" />
         <span>

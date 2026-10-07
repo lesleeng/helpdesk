@@ -2,11 +2,11 @@
 
 **Last Updated:** October 7, 2026  
 **Current Phase:** MVP Development  
-**Next Milestone:** 1.4 Admin Pages & Launch (Weeks 9-10)
+**Next Milestone:** Phase 1 wrap-up: auth integration + deployment verification
 
-> Milestones 1.1 (DB/models/mock auth), 1.2 (backend API) and 1.3 (frontend user pages) are implemented on branch
-> `claude/awesome-knuth-exyhqw`. Open items: generate the initial Alembic migration against a real
-> PostgreSQL instance; swap `AUTH_MODE=production` once workmate's auth details arrive.
+> Milestones 1.1 (DB/models/mock auth), 1.2 (backend API) and 1.3 (frontend user pages) and 1.4 (admin pages, migration, Docker files) are implemented on branch
+> `claude/awesome-knuth-exyhqw`. Open items: run `docker compose up` (Docker files untested);
+> admin list lacks the spec's date-range filter and bulk actions; swap `AUTH_MODE=production` once workmate's auth details arrive.
 
 ---
 
