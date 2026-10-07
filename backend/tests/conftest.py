@@ -55,6 +55,16 @@ def seeded(db):
 
 
 @pytest.fixture
+def tech_headers():
+    return {"Authorization": "Bearer demo-token-tech-1"}
+
+
+@pytest.fixture
+def tech2_headers():
+    return {"Authorization": "Bearer demo-token-tech-2"}
+
+
+@pytest.fixture
 def user2_headers():
     return {"Authorization": "Bearer demo-token-user-2"}
 

@@ -92,3 +92,14 @@ def require_admin(request: Request) -> Dict[str, Any]:
     if user.get("role") != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user
+
+
+STAFF_ROLES = ("admin", "tech")
+
+
+def require_staff(request: Request) -> Dict[str, Any]:
+    """Extract current user and verify an IT staff role (admin or tech)."""
+    user = get_current_user(request)
+    if user.get("role") not in STAFF_ROLES:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Staff access required")
+    return user

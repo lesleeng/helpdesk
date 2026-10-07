@@ -96,6 +96,12 @@ class TicketOut(ORMModel):
     resolved_at: Optional[datetime] = None
     closed_at: Optional[datetime] = None
     reopen_count: int
+    assigned_to_id: Optional[str] = None
+    assigned_at: Optional[datetime] = None
+    first_response_at: Optional[datetime] = None
+    sla_response_due: Optional[datetime] = None
+    sla_resolution_due: Optional[datetime] = None
+    sla_status: str = "n/a"
 
 
 class TicketDetailOut(TicketOut):
@@ -116,3 +122,48 @@ class DashboardOut(BaseModel):
     by_category: Dict[str, int]
     by_priority: Dict[str, int]
     avg_resolution_hours: Optional[float] = None
+
+
+class AssignRequest(BaseModel):
+    assignee_id: Optional[str] = None
+
+
+class BulkRequest(BaseModel):
+    ticket_ids: List[int] = Field(min_length=1, max_length=100)
+    status: Optional[TicketStatus] = None
+    priority: Optional[TicketPriority] = None
+    assignee_id: Optional[str] = None
+
+
+class BulkFailure(BaseModel):
+    id: int
+    reason: str
+
+
+class BulkResult(BaseModel):
+    updated: List[int]
+    failed: List[BulkFailure]
+
+
+class StaffOut(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+
+
+class AssigneeLoad(BaseModel):
+    assignee_id: str
+    open: int
+    resolved: int
+
+
+class ReportOut(BaseModel):
+    open_count: int
+    resolved_count: int
+    avg_resolution_hours: Optional[float] = None
+    avg_first_response_hours: Optional[float] = None
+    response_sla_met_pct: Optional[float] = None
+    resolution_sla_met_pct: Optional[float] = None
+    unassigned_open: int
+    by_assignee: List[AssigneeLoad]

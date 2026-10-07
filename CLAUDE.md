@@ -194,7 +194,7 @@ See `project_spec.md` for full schema.
 1. Frontend passes auth token (JWT/session) from workmate's system.
 2. Backend validates token against workmate's auth service.
 3. Backend queries workmate's `users` table to populate user info on tickets.
-4. Role check: User vs Admin (Tech Staff added Phase 2).
+4. Role check: user, tech (assigned tickets only), admin (everything). Staff names/emails come from `app/services/directory.py`; production mode is not integrated yet (no emails, `/staff` returns 501).
 
 **Environment variables:**
 - `WORKMATE_AUTH_URL` — Where to validate tokens
@@ -213,6 +213,10 @@ All endpoints prefixed with `/api/helpdesk/`:
 - `GET /tickets/{id}/comments` — List comments
 - `GET /tickets/{id}/history` — Audit log (admin only)
 - `POST /tickets/{id}/attachments` — Upload file
+- `PUT /tickets/{id}/assignee` — Assign/unassign (admin)
+- `POST /tickets/bulk` — Bulk status/priority/assignee (admin)
+- `GET /staff`, `GET /reports` — Staff directory, SLA/workload report (admin)
+- `GET /tickets` filters: `status, category_id, priority, search, mine, assignee_id, unassigned, created_from, created_to, sla_breached`
 
 See `project_spec.md` API section for complete list.
 

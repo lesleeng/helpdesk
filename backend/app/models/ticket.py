@@ -4,6 +4,7 @@ Core ticket models: Ticket, Comment, History, Attachment.
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from typing import Optional
 import enum
 
 from app.database import Base
@@ -57,6 +58,11 @@ class Ticket(Base):
     closed_at = Column(DateTime, nullable=True)
     reopen_count = Column(Integer, default=0)
     last_reopened_at = Column(DateTime, nullable=True)
+    assigned_to_id = Column(String(100), nullable=True, index=True)  # From workmate's system
+    assigned_at = Column(DateTime, nullable=True)
+    first_response_at = Column(DateTime, nullable=True)
+    sla_response_due = Column(DateTime, nullable=True)
+    sla_resolution_due = Column(DateTime, nullable=True)
 
     category = relationship("TicketCategory", back_populates="tickets")
     subcategory = relationship("TicketSubcategory", back_populates="tickets")
@@ -71,6 +77,33 @@ class Ticket(Base):
 
     def __repr__(self):
         return f"<Ticket #{self.id} {self.title}>"
+
+    def sla_state(self, now: Optional[datetime] = None) -> str:
+        """n/a | ok | at_risk | breached | met. Does not pause while on hold."""
+        now = now or datetime.utcnow()
+        if self.sla_response_due is None or self.sla_resolution_due is None:
+            return "n/a"
+        if self.status == TicketStatus.CANCELLED:
+            return "n/a"
+        responded = self.first_response_at or (None if self.status == TicketStatus.OPEN else now)
+        done = self.resolved_at or self.closed_at
+        if done is not None:
+            ok = done <= self.sla_resolution_due and (
+                self.first_response_at is None or self.first_response_at <= self.sla_response_due
+            )
+            return "met" if ok else "breached"
+        if now > self.sla_resolution_due or (
+            self.first_response_at is None and now > self.sla_response_due
+        ):
+            return "breached"
+        pending_due = self.sla_response_due if responded is None else self.sla_resolution_due
+        window = (pending_due - self.created_at).total_seconds() or 1
+        remaining = (pending_due - now).total_seconds()
+        return "at_risk" if remaining / window < 0.25 else "ok"
+
+    @property
+    def sla_status(self) -> str:
+        return self.sla_state()
 
 
 class TicketComment(Base):

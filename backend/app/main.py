@@ -54,10 +54,11 @@ async def root():
     }
 
 
-from app.routes import categories, tickets  # noqa: E402
+from app.routes import admin, categories, tickets  # noqa: E402
 
 app.include_router(tickets.router)
 app.include_router(categories.router)
+app.include_router(admin.router)
 
 
 if __name__ == "__main__":

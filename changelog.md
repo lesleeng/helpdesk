@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and attachments, My Tickets (status filter, search, pagination), Ticket Detail (reopen,
   attachments, comment thread); 10 Vitest tests; verified end-to-end in a browser
 
+### Added (Milestone 2.1: Phase 2 backend)
+- Tech staff role: sees and works only tickets assigned to them; admins assign (`PUT /tickets/{id}/assignee`)
+- SLA tracking: response/resolution due dates (24h/72h defaults), first-response tracking,
+  `sla_status` (ok/at_risk/breached/met), `sla_breached` filter; does not pause on hold
+- Bulk actions (`POST /tickets/bulk`, partial failures reported), advanced filters
+  (priority, assignee, unassigned, date range), `GET /reports`, `GET /staff`
+- Email notifications (created, status change, comment, assignment) via SMTP background tasks,
+  off unless `EMAIL_ENABLED=true`; migration 0002 (backfills SLA dates, verified on PostgreSQL 16)
+- 58 pytest tests, ~95% coverage
+
 ### Added (Milestone 1.4 admin + launch prep)
 - Admin UI: All Tickets (category/status/search filters, priority + submitter columns), status and
   priority changes limited to allowed transitions, audit history, Dashboard with breakdown tables

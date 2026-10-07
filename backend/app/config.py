@@ -46,6 +46,16 @@ class Settings(BaseSettings):
         "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173"
     )
 
+    # Email notifications (disabled by default)
+    EMAIL_ENABLED: bool = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "localhost")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "25"))
+    SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
+    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
+    SMTP_STARTTLS: bool = os.getenv("SMTP_STARTTLS", "false").lower() == "true"
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "helpdesk@localhost")
+    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:5173")
+
     # Ticket Settings
     DEFAULT_TICKET_STATUS: str = "open"
     REOPEN_WINDOW_DAYS: int = 7

@@ -21,6 +21,20 @@ DEMO_USERS = {
         "department": "Finance",
         "role": "user",
     },
+    "demo-token-tech-1": {
+        "id": "tech-1",
+        "name": "Tina Tech",
+        "email": "tina.tech@company.com",
+        "department": "IT Support",
+        "role": "tech",
+    },
+    "demo-token-tech-2": {
+        "id": "tech-2",
+        "name": "Tom Tech",
+        "email": "tom.tech@company.com",
+        "department": "IT Support",
+        "role": "tech",
+    },
     "demo-token-admin-1": {
         "id": "admin-1",
         "name": "Admin User",

@@ -1,11 +1,12 @@
 """Ticket business logic: access control, status flow, audit trail."""
 import os
 import uuid
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import date, datetime, time, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -18,7 +19,8 @@ from app.models.ticket import (
     TicketPriority,
     TicketStatus,
 )
-from app.schemas.ticket import CommentCreate, TicketCreate
+from app.schemas.ticket import BulkRequest, CommentCreate, TicketCreate
+from app.services import directory
 
 S = TicketStatus
 
@@ -36,6 +38,15 @@ def is_admin(user: Dict[str, Any]) -> bool:
     return user.get("role") == "admin"
 
 
+def is_staff(user: Dict[str, Any]) -> bool:
+    return user.get("role") in ("admin", "tech")
+
+
+def can_manage(ticket: Ticket, user: Dict[str, Any]) -> bool:
+    """Admins manage every ticket; tech staff manage only tickets assigned to them."""
+    return is_admin(user) or (user.get("role") == "tech" and ticket.assigned_to_id == user["id"])
+
+
 def _log(db: Session, ticket_id: int, user_id: str, field: str, old: Any, new: Any, kind: str):
     db.add(
         TicketHistory(
@@ -50,9 +61,18 @@ def _log(db: Session, ticket_id: int, user_id: str, field: str, old: Any, new: A
 
 
 def get_ticket_for_user(db: Session, ticket_id: int, user: Dict[str, Any]) -> Ticket:
-    """Fetch a ticket; non-admins only see their own (404 otherwise, to avoid leaking IDs)."""
+    """Fetch a ticket the user may view: own tickets, plus assigned ones for tech staff, all for
+    admins. 404 otherwise, to avoid leaking IDs."""
     ticket = db.get(Ticket, ticket_id)
-    if ticket is None or (not is_admin(user) and ticket.user_id != user["id"]):
+    if ticket is None or not (ticket.user_id == user["id"] or can_manage(ticket, user)):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
+    return ticket
+
+
+def get_ticket_for_staff(db: Session, ticket_id: int, user: Dict[str, Any]) -> Ticket:
+    """Fetch a ticket the user may work on as staff (admin: any; tech: assigned only)."""
+    ticket = db.get(Ticket, ticket_id)
+    if ticket is None or not can_manage(ticket, user):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
     return ticket
 
@@ -67,7 +87,11 @@ def create_ticket(db: Session, data: TicketCreate, user: Dict[str, Any]) -> Tick
                 status.HTTP_422_UNPROCESSABLE_ENTITY, "Subcategory does not belong to category"
             )
 
+    now = datetime.utcnow()
     ticket = Ticket(
+        created_at=now,
+        sla_response_due=now + timedelta(hours=settings.SLA_RESPONSE_TIME_HOURS),
+        sla_resolution_due=now + timedelta(hours=settings.SLA_RESOLUTION_TIME_HOURS),
         title=data.title,
         description=data.description,
         user_id=user["id"],
@@ -93,25 +117,54 @@ def create_ticket(db: Session, data: TicketCreate, user: Dict[str, Any]) -> Tick
     return ticket
 
 
+@dataclass
+class TicketFilters:
+    status: Optional[TicketStatus] = None
+    category_id: Optional[int] = None
+    priority: Optional[TicketPriority] = None
+    search: Optional[str] = None
+    mine: bool = False
+    assignee_id: Optional[str] = None
+    unassigned: bool = False
+    created_from: Optional[date] = None
+    created_to: Optional[date] = None
+    sla_breached: bool = False
+
+
 def list_tickets(
-    db: Session,
-    user: Dict[str, Any],
-    status_filter: Optional[TicketStatus],
-    category_id: Optional[int],
-    search: Optional[str],
-    page: int,
-    page_size: int,
-    mine: bool = False,
+    db: Session, user: Dict[str, Any], f: TicketFilters, page: int, page_size: int
 ) -> Tuple[List[Ticket], int]:
     q = db.query(Ticket)
-    if mine or not is_admin(user):
+    if f.mine or not is_staff(user):
         q = q.filter(Ticket.user_id == user["id"])
-    if status_filter:
-        q = q.filter(Ticket.status == status_filter)
-    if category_id:
-        q = q.filter(Ticket.category_id == category_id)
-    if search:
-        like = f"%{search}%"
+    elif not is_admin(user):
+        q = q.filter(or_(Ticket.user_id == user["id"], Ticket.assigned_to_id == user["id"]))
+    if f.status:
+        q = q.filter(Ticket.status == f.status)
+    if f.category_id:
+        q = q.filter(Ticket.category_id == f.category_id)
+    if f.priority:
+        q = q.filter(Ticket.priority == f.priority)
+    if f.assignee_id:
+        q = q.filter(Ticket.assigned_to_id == f.assignee_id)
+    if f.unassigned:
+        q = q.filter(Ticket.assigned_to_id.is_(None))
+    if f.created_from:
+        q = q.filter(Ticket.created_at >= datetime.combine(f.created_from, time.min))
+    if f.created_to:
+        q = q.filter(Ticket.created_at <= datetime.combine(f.created_to, time.max))
+    if f.sla_breached:
+        now = datetime.utcnow()
+        active = [TicketStatus.OPEN, TicketStatus.IN_PROGRESS, TicketStatus.ON_HOLD]
+        q = q.filter(
+            Ticket.status.in_(active),
+            or_(
+                Ticket.sla_resolution_due < now,
+                and_(Ticket.first_response_at.is_(None), Ticket.sla_response_due < now),
+            ),
+        )
+    if f.search:
+        like = f"%{f.search}%"
         q = q.filter(or_(Ticket.title.ilike(like), Ticket.description.ilike(like)))
     total = q.count()
     items = (
@@ -138,6 +191,8 @@ def update_ticket(
             )
         _log(db, ticket.id, admin["id"], "status", ticket.status, new_status, "status_change")
         now = datetime.utcnow()
+        if ticket.first_response_at is None and ticket.user_id != admin["id"]:
+            ticket.first_response_at = now
         if new_status == TicketStatus.RESOLVED:
             ticket.resolved_at = now
         elif new_status == TicketStatus.CLOSED:
@@ -172,8 +227,10 @@ def reopen_ticket(db: Session, ticket: Ticket, user: Dict[str, Any]) -> Ticket:
 def add_comment(
     db: Session, ticket: Ticket, data: CommentCreate, user: Dict[str, Any]
 ) -> TicketComment:
-    if data.is_internal and not is_admin(user):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only admins can post internal notes")
+    if data.is_internal and not can_manage(ticket, user):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Only assigned staff can post internal notes"
+        )
     comment = TicketComment(
         ticket_id=ticket.id,
         user_id=user["id"],
@@ -181,6 +238,13 @@ def add_comment(
         is_internal=data.is_internal,
     )
     db.add(comment)
+    if (
+        not data.is_internal
+        and ticket.first_response_at is None
+        and can_manage(ticket, user)
+        and ticket.user_id != user["id"]
+    ):
+        ticket.first_response_at = datetime.utcnow()
     _log(
         db,
         ticket.id,
@@ -197,9 +261,88 @@ def add_comment(
 
 def list_comments(db: Session, ticket: Ticket, user: Dict[str, Any]) -> List[TicketComment]:
     q = db.query(TicketComment).filter(TicketComment.ticket_id == ticket.id)
-    if not is_admin(user):
+    if not can_manage(ticket, user):
         q = q.filter(TicketComment.is_internal.is_(False))
     return q.order_by(TicketComment.created_at, TicketComment.id).all()
+
+
+def assign_ticket(
+    db: Session, ticket: Ticket, admin: Dict[str, Any], assignee_id: Optional[str]
+) -> Ticket:
+    if assignee_id is not None:
+        if assignee_id not in {u["id"] for u in directory.list_staff()}:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown staff member")
+    if assignee_id != ticket.assigned_to_id:
+        _log(db, ticket.id, admin["id"], "assignee", ticket.assigned_to_id, assignee_id, "assigned")
+        ticket.assigned_to_id = assignee_id
+        ticket.assigned_at = datetime.utcnow() if assignee_id else None
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
+def bulk_update(db: Session, admin: Dict[str, Any], req: BulkRequest) -> Dict[str, Any]:
+    """Apply status/priority/assignee to many tickets; one failure never blocks the others."""
+    updated: List[int] = []
+    failed: List[Dict[str, Any]] = []
+    for ticket_id in dict.fromkeys(req.ticket_ids):
+        try:
+            ticket = get_ticket_for_staff(db, ticket_id, admin)
+            if req.assignee_id is not None:
+                assign_ticket(db, ticket, admin, req.assignee_id)
+            if req.status is not None or req.priority is not None:
+                update_ticket(db, ticket, admin, req.status, req.priority)
+            updated.append(ticket_id)
+        except HTTPException as exc:
+            db.rollback()
+            failed.append({"id": ticket_id, "reason": str(exc.detail)})
+    return {"updated": updated, "failed": failed}
+
+
+def report_stats(db: Session) -> Dict[str, Any]:
+    tickets = db.query(Ticket).all()
+    done_states = (TicketStatus.RESOLVED, TicketStatus.CLOSED)
+    active = (TicketStatus.OPEN, TicketStatus.IN_PROGRESS, TicketStatus.ON_HOLD)
+    resolved = [t for t in tickets if t.status in done_states]
+    open_ = [t for t in tickets if t.status in active]
+
+    def avg_hours(pairs):
+        vals = [(b - a).total_seconds() / 3600 for a, b in pairs]
+        return round(sum(vals) / len(vals), 2) if vals else None
+
+    def pct(met: int, total: int):
+        return round(100 * met / total, 1) if total else None
+
+    responded = [t for t in tickets if t.first_response_at and t.sla_response_due]
+    finished = [t for t in resolved if (t.resolved_at or t.closed_at) and t.sla_resolution_due]
+    load: Dict[str, Dict[str, int]] = {}
+    for t in tickets:
+        if t.assigned_to_id and t.status in active + done_states:
+            row = load.setdefault(t.assigned_to_id, {"open": 0, "resolved": 0})
+            row["open" if t.status in active else "resolved"] += 1
+    return {
+        "open_count": len(open_),
+        "resolved_count": len(resolved),
+        "avg_resolution_hours": avg_hours(
+            (t.created_at, t.resolved_at or t.closed_at)
+            for t in resolved
+            if t.resolved_at or t.closed_at
+        ),
+        "avg_first_response_hours": avg_hours(
+            (t.created_at, t.first_response_at) for t in responded
+        ),
+        "response_sla_met_pct": pct(
+            sum(1 for t in responded if t.first_response_at <= t.sla_response_due), len(responded)
+        ),
+        "resolution_sla_met_pct": pct(
+            sum(1 for t in finished if (t.resolved_at or t.closed_at) <= t.sla_resolution_due),
+            len(finished),
+        ),
+        "unassigned_open": sum(1 for t in open_ if t.assigned_to_id is None),
+        "by_assignee": [
+            {"assignee_id": k, **v} for k, v in sorted(load.items(), key=lambda kv: kv[0])
+        ],
+    }
 
 
 async def save_attachment(
