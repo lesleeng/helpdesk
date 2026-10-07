@@ -1,8 +1,12 @@
 # Project Status - Helpdesk Module
 
-**Last Updated:** October 6, 2026  
-**Current Phase:** MVP Planning  
-**Next Milestone:** Backend & Database Setup (Weeks 1-2)
+**Last Updated:** October 7, 2026  
+**Current Phase:** MVP Development  
+**Next Milestone:** 1.3 Frontend & User Pages (Weeks 6-8)
+
+> Milestone 1.1 (DB/models/mock auth) and 1.2 (backend API) are implemented on branch
+> `claude/awesome-knuth-exyhqw`. Open items: generate the initial Alembic migration against a real
+> PostgreSQL instance; swap `AUTH_MODE=production` once workmate's auth details arrive.
 
 ---
 

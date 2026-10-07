@@ -3,9 +3,7 @@ Mock authentication service for development.
 Simulates workmate's auth system with demo users.
 Can be replaced with real auth when WORKMATE_AUTH_URL is available.
 """
-from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-import json
 
 
 DEMO_USERS = {

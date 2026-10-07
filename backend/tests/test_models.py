@@ -4,8 +4,13 @@ Tests for database models.
 import pytest
 from datetime import datetime
 from app.models.ticket import (
-    Ticket, TicketComment, TicketHistory, TicketAttachment,
-    TicketStatus, TicketPriority, TicketUrgency
+    Ticket,
+    TicketComment,
+    TicketHistory,
+    TicketAttachment,
+    TicketStatus,
+    TicketPriority,
+    TicketUrgency,
 )
 from app.models.category import TicketCategory, TicketSubcategory, TicketExtraFields
 

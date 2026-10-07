@@ -11,15 +11,18 @@ from app.database import Base
 
 class TicketStatus(str, enum.Enum):
     """Ticket status flow."""
+
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     ON_HOLD = "on_hold"
     RESOLVED = "resolved"
     CLOSED = "closed"
+    CANCELLED = "cancelled"
 
 
 class TicketPriority(str, enum.Enum):
     """Priority levels (set by admin based on urgency)."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -28,6 +31,7 @@ class TicketPriority(str, enum.Enum):
 
 class TicketUrgency(str, enum.Enum):
     """User-submitted urgency level."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -35,6 +39,7 @@ class TicketUrgency(str, enum.Enum):
 
 class Ticket(Base):
     """Main ticket record."""
+
     __tablename__ = "tickets"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -57,8 +62,12 @@ class Ticket(Base):
     subcategory = relationship("TicketSubcategory", back_populates="tickets")
     comments = relationship("TicketComment", back_populates="ticket", cascade="all, delete-orphan")
     history = relationship("TicketHistory", back_populates="ticket", cascade="all, delete-orphan")
-    attachments = relationship("TicketAttachment", back_populates="ticket", cascade="all, delete-orphan")
-    extra_fields = relationship("TicketExtraFields", back_populates="ticket", cascade="all, delete-orphan")
+    attachments = relationship(
+        "TicketAttachment", back_populates="ticket", cascade="all, delete-orphan"
+    )
+    extra_fields = relationship(
+        "TicketExtraFields", back_populates="ticket", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Ticket #{self.id} {self.title}>"
@@ -66,10 +75,13 @@ class Ticket(Base):
 
 class TicketComment(Base):
     """Comment on a ticket (conversation thread)."""
+
     __tablename__ = "ticket_comments"
 
     id = Column(Integer, primary_key=True, index=True)
-    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True)
+    ticket_id = Column(
+        Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     user_id = Column(String(100), nullable=False, index=True)  # From workmate's system
     content = Column(Text, nullable=False)
     is_internal = Column(Boolean, default=False)  # Internal notes (admin only)
@@ -77,7 +89,9 @@ class TicketComment(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     ticket = relationship("Ticket", back_populates="comments")
-    attachments = relationship("TicketAttachment", back_populates="comment", cascade="all, delete-orphan")
+    attachments = relationship(
+        "TicketAttachment", back_populates="comment", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<TicketComment on ticket #{self.ticket_id}>"
@@ -85,10 +99,13 @@ class TicketComment(Base):
 
 class TicketHistory(Base):
     """Audit log: tracks all changes to a ticket."""
+
     __tablename__ = "ticket_history"
 
     id = Column(Integer, primary_key=True, index=True)
-    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True)
+    ticket_id = Column(
+        Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     changed_by_id = Column(String(100), nullable=False, index=True)  # User who made change
     field_name = Column(String(100), nullable=False)
     old_value = Column(Text)
@@ -104,11 +121,16 @@ class TicketHistory(Base):
 
 class TicketAttachment(Base):
     """File attachment on ticket or comment."""
+
     __tablename__ = "ticket_attachments"
 
     id = Column(Integer, primary_key=True, index=True)
-    ticket_id = Column(Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True)
-    comment_id = Column(Integer, ForeignKey("ticket_comments.id", ondelete="CASCADE"), nullable=True)
+    ticket_id = Column(
+        Integer, ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    comment_id = Column(
+        Integer, ForeignKey("ticket_comments.id", ondelete="CASCADE"), nullable=True
+    )
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)  # Relative to UPLOAD_DIR
     file_size = Column(Integer)  # Bytes

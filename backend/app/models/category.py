@@ -11,6 +11,7 @@ from app.database import Base
 
 class TicketCategory(Base):
     """Main ticket categories (Service, Incident, Maintenance, HR-Init)."""
+
     __tablename__ = "ticket_categories"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -22,7 +23,9 @@ class TicketCategory(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    subcategories = relationship("TicketSubcategory", back_populates="category", cascade="all, delete-orphan")
+    subcategories = relationship(
+        "TicketSubcategory", back_populates="category", cascade="all, delete-orphan"
+    )
     tickets = relationship("Ticket", back_populates="category")
 
     def __repr__(self):
@@ -31,10 +34,13 @@ class TicketCategory(Base):
 
 class TicketSubcategory(Base):
     """Subcategories under each main category."""
+
     __tablename__ = "ticket_subcategories"
 
     id = Column(Integer, primary_key=True, index=True)
-    category_id = Column(Integer, ForeignKey("ticket_categories.id", ondelete="CASCADE"), nullable=False)
+    category_id = Column(
+        Integer, ForeignKey("ticket_categories.id", ondelete="CASCADE"), nullable=False
+    )
     name = Column(String(100), nullable=False, index=True)
     description = Column(Text)
     order = Column(Integer, default=0)
@@ -56,6 +62,7 @@ class TicketExtraFields(Base):
     Dynamic extra fields per ticket.
     Stores category-specific data (access request details, equipment type, etc.)
     """
+
     __tablename__ = "ticket_extra_fields"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Milestone 1.1 + 1.2 backend)
+- FastAPI scaffold, SQLAlchemy models, Alembic environment, mock auth (`AUTH_MODE=mock`)
+- Ticket CRUD, status flow (admin transitions, user reopen within window), comments with
+  internal notes, attachments (type/size validated), history audit log, categories, admin dashboard
+- Category seed (`make seed`); 33 pytest tests, ~94% coverage
+
 ### Planning
 - MVP Phase 1 specifications complete
 - Database schema designed

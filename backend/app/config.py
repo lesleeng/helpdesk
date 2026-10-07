@@ -21,8 +21,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/helpdesk_db"
+        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/helpdesk_db"
     )
 
     # Auth Mode: "mock" for development, "production" for real auth
@@ -37,18 +36,14 @@ class Settings(BaseSettings):
     # File Storage
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
     MAX_UPLOAD_SIZE_MB: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "50"))
-    ALLOWED_FILE_TYPES: str = os.getenv(
-        "ALLOWED_FILE_TYPES",
-        "pdf,jpg,jpeg,png,docx,xlsx,txt"
-    )
+    ALLOWED_FILE_TYPES: str = os.getenv("ALLOWED_FILE_TYPES", "pdf,jpg,jpeg,png,docx,xlsx,txt")
 
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     # CORS
     ALLOWED_ORIGINS: str = os.getenv(
-        "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://localhost:5173"
+        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173"
     )
 
     # Ticket Settings

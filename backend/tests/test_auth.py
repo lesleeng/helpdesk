@@ -71,9 +71,6 @@ def test_auth_headers_missing(client):
 
 def test_auth_headers_invalid(client):
     """Test request with invalid authorization header."""
-    response = client.post(
-        "/tickets",
-        headers={"Authorization": "Bearer invalid-token"}
-    )
+    response = client.post("/tickets", headers={"Authorization": "Bearer invalid-token"})
     assert response.status_code == 401
     assert "Invalid or expired token" in response.json()["error"]
