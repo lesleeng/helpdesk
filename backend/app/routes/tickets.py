@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import get_current_user, require_admin, require_staff
-from app.models.ticket import TicketHistory, TicketPriority, TicketStatus
+from app.models.ticket import Ticket, TicketHistory, TicketPriority, TicketStatus
 from app.schemas.ticket import (
     AssignRequest,
     AttachmentOut,
@@ -22,6 +22,7 @@ from app.schemas.ticket import (
     TicketOut,
     TicketUpdate,
 )
+from app.services import event_service as events
 from app.services import notification_service as notify
 from app.services import ticket_service as svc
 
@@ -70,8 +71,10 @@ def create_ticket(
 ):
     ticket = svc.create_ticket(db, data, user)
     notify.ticket_created(background, ticket)
+    events.emit(db, background, "ticket.created", ticket, user)
     if ticket.approval_status == "pending":
         notify.approval_requested(background, ticket)
+        events.emit(db, background, "ticket.approval_requested", ticket, user)
     return ticket
 
 
@@ -82,11 +85,22 @@ def bulk_update(
     db: Session = Depends(get_db),
     admin: Dict[str, Any] = Depends(require_admin),
 ):
+    before = {
+        t.id: (t.status.value, t.assigned_to_id)
+        for t in db.query(Ticket).filter(Ticket.id.in_(data.ticket_ids)).all()
+    }
     result = svc.bulk_update(db, admin, data)
     for ticket_id in result["updated"]:
         ticket = svc.get_ticket_for_staff(db, ticket_id, admin)
+        old_status, old_assignee = before[ticket_id]
         if data.assignee_id is not None:
             notify.assigned(background, ticket, admin)
+        if ticket.assigned_to_id != old_assignee:
+            events.emit(db, background, "ticket.assigned", ticket, admin)
+        if ticket.status.value != old_status:
+            events.emit(
+                db, background, "ticket.status_changed", ticket, admin, {"from": old_status}
+            )
     return result
 
 
@@ -112,6 +126,7 @@ def update_ticket(
     ticket = svc.update_ticket(db, ticket, staff, data.status, data.priority)
     if ticket.status.value != old_status:
         notify.status_changed(background, ticket, staff, old_status)
+        events.emit(db, background, "ticket.status_changed", ticket, staff, {"from": old_status})
     return ticket
 
 
@@ -124,19 +139,25 @@ def assign_ticket(
     admin: Dict[str, Any] = Depends(require_admin),
 ):
     ticket = svc.get_ticket_for_staff(db, ticket_id, admin)
+    old_assignee = ticket.assigned_to_id
     ticket = svc.assign_ticket(db, ticket, admin, data.assignee_id)
     notify.assigned(background, ticket, admin)
+    if ticket.assigned_to_id != old_assignee:
+        events.emit(db, background, "ticket.assigned", ticket, admin)
     return ticket
 
 
 @router.post("/{ticket_id}/reopen", response_model=TicketOut)
 def reopen_ticket(
     ticket_id: int,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
     user: Dict[str, Any] = Depends(get_current_user),
 ):
     ticket = svc.get_ticket_for_user(db, ticket_id, user)
-    return svc.reopen_ticket(db, ticket, user)
+    ticket = svc.reopen_ticket(db, ticket, user)
+    events.emit(db, background, "ticket.status_changed", ticket, user, {"from": "resolved"})
+    return ticket
 
 
 @router.get("/{ticket_id}/comments", response_model=List[CommentOut])
@@ -162,6 +183,15 @@ def add_comment(
     ticket = svc.get_ticket_for_user(db, ticket_id, user)
     comment = svc.add_comment(db, ticket, data, user)
     notify.comment_added(background, ticket, user, comment.is_internal)
+    if not comment.is_internal:  # internal notes never leave the help desk
+        events.emit(
+            db,
+            background,
+            "ticket.commented",
+            ticket,
+            user,
+            {"comment": {"id": comment.id, "author_id": user["id"], "content": comment.content}},
+        )
     return comment
 
 

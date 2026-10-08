@@ -12,6 +12,8 @@ from app.schemas.ticket import (
     AiCategorizeOut,
     AiReplyOut,
     AiStatusOut,
+    ChatIn,
+    ChatOut,
     DuplicateOut,
 )
 from app.services import ai_service, duplicate_service, kb_service
@@ -45,6 +47,15 @@ def categorize(
     user: Dict[str, Any] = Depends(get_current_user),
 ):
     return _guard(ai_service.categorize, db, user["id"], data.title, data.description)
+
+
+@router.post("/ai/chat", response_model=ChatOut)
+def chat(
+    data: ChatIn,
+    db: Session = Depends(get_db),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    return _guard(ai_service.chat, db, user["id"], [m.model_dump() for m in data.messages])
 
 
 @router.post("/tickets/{ticket_id}/ai/suggest-response", response_model=AiReplyOut)

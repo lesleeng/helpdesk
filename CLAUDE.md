@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Start
 
 **Project:** Internal IT Help Desk Module  
-**Status:** Phase 1 and 2 complete; Phase 3 backend done (knowledge base, manager approvals, feedback survey, per-category SLA, Claude assistance); Phase 3 frontend next; remaining: workmate auth/user-directory integration and deployment verification  
+**Status:** Phases 1-3 implemented (tickets, tech staff, SLA, bulk actions, reports, email, knowledge base, manager approvals, feedback survey, per-category SLA, Claude assistance, mobile layout); remaining: workmate auth/user-directory integration, deployment verification, Phase 3+ items  
 **Stack:** React (frontend) + Python FastAPI (backend) + PostgreSQL (database)  
 **Documentation:** See `project_spec.md` for full requirements and architecture
 
@@ -159,6 +159,7 @@ npm test -- --coverage  # Coverage report
 npm run lint    # Run ESLint
 npm run type-check  # Run TypeScript check
 npm run format  # Format with Prettier (if configured)
+npm run preview:demo  # Demo mode: whole UI in the browser with sample data, no backend (VITE_DEMO=true)
 ```
 
 ## Architecture Principles

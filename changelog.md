@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and attachments, My Tickets (status filter, search, pagination), Ticket Detail (reopen,
   attachments, comment thread); 10 Vitest tests; verified end-to-end in a browser
 
+### Added (Milestone 3.2: Phase 3 frontend)
+- Knowledge Base pages (search, article view, admin editor with in-page delete confirmation);
+  related-article suggestions and an AI "Suggest category" button on the ticket form
+- Ticket Detail: manager Approve/Reject, rating form after resolution, linked knowledge articles
+  (staff link/unlink), possible duplicates, AI "Suggest reply"; Approvals page; admin SLA rules page;
+  satisfaction and pending approvals on Reports
+- Role landing pages (admin dashboard, tech assigned tickets, user tickets); mobile layout
+- Demo mode (`npm run preview:demo`): the whole UI with sample data and no backend
+- 71 Vitest tests; the browser end-to-end test now covers approval and knowledge base flows
+
 ### Added (Milestone 3.1: Phase 3 backend)
 - Knowledge base: articles (draft/published), keyword search with ranking, suggestions, links to tickets
 - Manager approval for access/licence requests: tickets wait in `pending` until the requester's

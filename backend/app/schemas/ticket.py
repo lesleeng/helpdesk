@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.ticket import TicketPriority, TicketStatus, TicketUrgency
 
@@ -18,6 +18,7 @@ class SubcategoryOut(ORMModel):
     description: Optional[str] = None
     extra_fields_template: Optional[dict] = None
     requires_approval: bool = False
+    active: bool = True
 
 
 class CategoryOut(ORMModel):
@@ -275,3 +276,161 @@ class DuplicateOut(BaseModel):
     title: str
     status: str
     score: float
+
+
+class WebhookIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    url: str = Field(min_length=8, max_length=500)
+    events: List[str] = Field(default_factory=lambda: ["*"], max_length=20)
+
+
+class WebhookUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    url: Optional[str] = Field(default=None, min_length=8, max_length=500)
+    events: Optional[List[str]] = Field(default=None, max_length=20)
+    active: Optional[bool] = None
+
+
+class WebhookOut(BaseModel):
+    id: int
+    name: str
+    url: str
+    events: List[str]
+    active: bool
+    created_at: datetime
+    last_status: Optional[str] = None
+    last_delivery_at: Optional[datetime] = None
+
+
+class WebhookCreated(WebhookOut):
+    secret: str
+
+
+class DeliveryOut(ORMModel):
+    id: int
+    event: str
+    ticket_id: Optional[int] = None
+    status: str
+    response_code: Optional[int] = None
+    attempts: int
+    error: Optional[str] = None
+    created_at: datetime
+    delivered_at: Optional[datetime] = None
+
+
+class IntegrationsStatus(BaseModel):
+    slack_enabled: bool
+    webhook_events: List[str]
+    allow_private_webhooks: bool
+
+
+class VolumePoint(BaseModel):
+    date: str
+    created: int
+    resolved: int
+
+
+class BacklogBucket(BaseModel):
+    bucket: str
+    count: int
+
+
+class CategoryResolution(BaseModel):
+    category: str
+    avg_hours: Optional[float] = None
+    resolved: int
+
+
+class SlaWeek(BaseModel):
+    week_start: str
+    met: int
+    total: int
+    pct: float
+
+
+class SatisfactionWeek(BaseModel):
+    week_start: str
+    avg_rating: Optional[float] = None
+    count: int
+
+
+class AnalyticsTotals(BaseModel):
+    created: int
+    resolved: int
+    avg_first_response_hours: Optional[float] = None
+    avg_resolution_hours: Optional[float] = None
+    reopen_rate_pct: Optional[float] = None
+
+
+class AnalyticsOut(BaseModel):
+    days: int
+    totals: AnalyticsTotals
+    volume: List[VolumePoint]
+    backlog_age: List[BacklogBucket]
+    resolution_by_category: List[CategoryResolution]
+    sla_by_week: List[SlaWeek]
+    satisfaction_by_week: List[SatisfactionWeek]
+
+
+class FieldDef(BaseModel):
+    name: str = Field(pattern=r"^[a-z][a-z0-9_]{0,49}$")
+    label: str = Field(min_length=1, max_length=100)
+    type: Literal["text", "textarea", "date", "number", "select"] = "text"
+    options: Optional[List[str]] = Field(default=None, max_length=30)
+    required: bool = False
+
+    @model_validator(mode="after")
+    def check_options(self):
+        if self.type == "select":
+            cleaned = [o.strip() for o in (self.options or []) if o.strip()]
+            if not cleaned:
+                raise ValueError("A select field needs at least one option")
+            self.options = list(dict.fromkeys(cleaned))
+        else:
+            self.options = None
+        return self
+
+
+class FieldsIn(BaseModel):
+    fields: List[FieldDef] = Field(max_length=20)
+
+    @model_validator(mode="after")
+    def unique_names(self):
+        names = [f.name for f in self.fields]
+        if len(names) != len(set(names)):
+            raise ValueError("Field names must be unique")
+        return self
+
+
+class SubcategoryCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    requires_approval: bool = False
+
+
+class SubcategoryUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    requires_approval: Optional[bool] = None
+    active: Optional[bool] = None
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2000)
+
+
+class ChatIn(BaseModel):
+    messages: List[ChatMessage] = Field(min_length=1, max_length=20)
+
+
+class TicketDraftOut(BaseModel):
+    title: str
+    description: str
+    category_id: int
+    subcategory_id: Optional[int] = None
+    urgency: Literal["low", "medium", "high"]
+
+
+class ChatOut(BaseModel):
+    answer: str
+    articles: List[KbArticleOut]
+    ticket_draft: Optional[TicketDraftOut] = None

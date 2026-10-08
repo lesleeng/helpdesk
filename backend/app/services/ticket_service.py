@@ -19,7 +19,7 @@ from app.models.ticket import (
     TicketStatus,
 )
 from app.schemas.ticket import BulkRequest, CommentCreate, TicketCreate
-from app.services import approval_service, directory, feedback_service, sla_service
+from app.services import approval_service, directory, feedback_service, form_service, sla_service
 from app.services.ticket_core import is_admin
 from app.services.ticket_core import log_history as _log
 
@@ -74,6 +74,11 @@ def create_ticket(db: Session, data: TicketCreate, user: Dict[str, Any]) -> Tick
                 status.HTTP_422_UNPROCESSABLE_ENTITY, "Subcategory does not belong to category"
             )
 
+    if sub is not None and not sub.active:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "This request type is no longer available"
+        )
+    extra_fields = form_service.validate_extra_fields(sub, data.extra_fields)
     now = datetime.utcnow()
     response_hours, resolution_hours = sla_service.sla_hours(db, data.category_id)
     ticket = Ticket(
@@ -90,7 +95,7 @@ def create_ticket(db: Session, data: TicketCreate, user: Dict[str, Any]) -> Tick
     )
     db.add(ticket)
     db.flush()
-    for name, value in data.extra_fields.items():
+    for name, value in extra_fields.items():
         db.add(
             TicketExtraFields(
                 ticket_id=ticket.id,

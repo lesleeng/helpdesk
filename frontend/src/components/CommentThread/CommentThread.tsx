@@ -4,7 +4,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
 
-export default function CommentThread({ ticketId }: { ticketId: number }) {
+export default function CommentThread({
+  ticketId,
+  canSuggest = false,
+}: {
+  ticketId: number
+  canSuggest?: boolean
+}) {
   const { user } = useAuth()
   const qc = useQueryClient()
   const [content, setContent] = useState('')
@@ -12,10 +18,22 @@ export default function CommentThread({ ticketId }: { ticketId: number }) {
     queryKey: ['comments', ticketId],
     queryFn: () => api.listComments(ticketId),
   })
+  const aiStatus = useQuery({ queryKey: ['ai-status'], queryFn: api.aiStatus, enabled: canSuggest })
+  const [draftNote, setDraftNote] = useState('')
+  const suggest = useMutation({
+    mutationFn: () => api.aiReply(ticketId),
+    onSuccess: (reply) => {
+      setContent(reply.draft)
+      setDraftNote(
+        `Draft written by AI from ${reply.articles.length} article${reply.articles.length === 1 ? '' : 's'}. Review it before posting.`,
+      )
+    },
+  })
   const add = useMutation({
     mutationFn: () => api.addComment(ticketId, content.trim()),
     onSuccess: () => {
       setContent('')
+      setDraftNote('')
       qc.invalidateQueries({ queryKey: ['comments', ticketId] })
     },
   })
@@ -52,10 +70,20 @@ export default function CommentThread({ ticketId }: { ticketId: number }) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
+        {draftNote && <p className="muted">{draftNote}</p>}
+        {suggest.error && <p className="error">{(suggest.error as Error).message}</p>}
         {add.error && <p className="error">{(add.error as Error).message}</p>}
         <button type="submit" disabled={add.isPending || !content.trim()}>
           Post comment
         </button>
+        {canSuggest && aiStatus.data?.enabled && (
+          <>
+            {' '}
+            <button type="button" onClick={() => suggest.mutate()} disabled={suggest.isPending}>
+              {suggest.isPending ? 'Writing…' : 'Suggest reply'}
+            </button>
+          </>
+        )}
       </form>
     </section>
   )

@@ -1,7 +1,17 @@
+import { ApiError } from './errors'
 import type {
   Attachment,
   BulkInput,
   BulkResult,
+  AiCategorization,
+  AiReply,
+  AiStatus,
+  Duplicate,
+  Feedback,
+  KbArticle,
+  KbArticleInput,
+  KbList,
+  SlaRule,
   Category,
   Comment,
   Dashboard,
@@ -21,15 +31,18 @@ import type {
 const BASE = `${import.meta.env.VITE_API_URL ?? ''}/api/helpdesk`
 const TOKEN_KEY = 'helpdesk.token'
 
+let memoryToken: string | null = null
+
 export const tokenStore = {
   get: (): string | null => {
     try {
-      return localStorage.getItem(TOKEN_KEY)
+      return localStorage.getItem(TOKEN_KEY) ?? memoryToken
     } catch {
-      return null
+      return memoryToken
     }
   },
   set: (token: string) => {
+    memoryToken = token
     try {
       localStorage.setItem(TOKEN_KEY, token)
     } catch {
@@ -37,6 +50,7 @@ export const tokenStore = {
     }
   },
   clear: () => {
+    memoryToken = null
     try {
       localStorage.removeItem(TOKEN_KEY)
     } catch {
@@ -45,21 +59,19 @@ export const tokenStore = {
   },
 }
 
-export class ApiError extends Error {
-  status: number
-  constructor(status: number, message: string) {
-    super(message)
-    this.status = status
-  }
-}
+export { ApiError }
 
 async function request<T>(
   path: string,
   init: RequestInit = {},
   tokenOverride?: string,
 ): Promise<T> {
-  const headers = new Headers(init.headers)
   const token = tokenOverride ?? tokenStore.get()
+  if (import.meta.env.VITE_DEMO === 'true') {
+    const { demoRequest } = await import('../demo/demoApi')
+    return demoRequest<T>(init.method ?? 'GET', path, init.body, token)
+  }
+  const headers = new Headers(init.headers)
   if (token) headers.set('Authorization', `Bearer ${token}`)
   if (typeof init.body === 'string') headers.set('Content-Type', 'application/json')
   const res = await fetch(`${BASE}${path}`, { ...init, headers })
@@ -74,6 +86,7 @@ async function request<T>(
     }
     throw new ApiError(res.status, message)
   }
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
@@ -125,6 +138,47 @@ export const api = {
   report: () => request<Report>('/reports'),
   history: (id: number) => request<HistoryEntry[]>(`/tickets/${id}/history`),
   dashboard: () => request<Dashboard>('/dashboard'),
+  kbList: (params: { q?: string; categoryId?: number; page?: number; pageSize?: number }) => {
+    const q = new URLSearchParams()
+    if (params.q) q.set('q', params.q)
+    if (params.categoryId) q.set('category_id', String(params.categoryId))
+    q.set('page', String(params.page ?? 1))
+    if (params.pageSize) q.set('page_size', String(params.pageSize))
+    return request<KbList>(`/kb/articles?${q}`)
+  },
+  kbSuggest: (q: string, categoryId?: number) =>
+    request<KbArticle[]>(
+      `/kb/suggest?${new URLSearchParams({ q, ...(categoryId ? { category_id: String(categoryId) } : {}) })}`,
+    ),
+  kbGet: (id: number) => request<KbArticle>(`/kb/articles/${id}`),
+  kbCreate: (data: KbArticleInput) => request<KbArticle>('/kb/articles', json(data)),
+  kbUpdate: (id: number, data: KbArticleInput) =>
+    request<KbArticle>(`/kb/articles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  kbDelete: (id: number) => request<void>(`/kb/articles/${id}`, { method: 'DELETE' }),
+  ticketKb: (id: number) => request<KbArticle[]>(`/tickets/${id}/kb`),
+  linkKb: (id: number, articleId: number) =>
+    request<KbArticle[]>(`/tickets/${id}/kb`, json({ article_id: articleId })),
+  unlinkKb: (id: number, articleId: number) =>
+    request<KbArticle[]>(`/tickets/${id}/kb/${articleId}`, { method: 'DELETE' }),
+  approvals: () => request<Ticket[]>('/approvals'),
+  decideApproval: (id: number, decision: 'approve' | 'reject', comment?: string) =>
+    request<Ticket>(`/tickets/${id}/approval`, json({ decision, comment: comment || null })),
+  sendFeedback: (id: number, rating: number, comment?: string) =>
+    request<Feedback>(`/tickets/${id}/feedback`, json({ rating, comment: comment || null })),
+  slaRules: () => request<SlaRule[]>('/sla-rules'),
+  setSlaRule: (categoryId: number, response_hours: number, resolution_hours: number) =>
+    request<SlaRule[]>(`/sla-rules/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ response_hours, resolution_hours }),
+    }),
+  resetSlaRule: (categoryId: number) =>
+    request<void>(`/sla-rules/${categoryId}`, { method: 'DELETE' }),
+  aiStatus: () => request<AiStatus>('/ai/status'),
+  aiCategorize: (title: string, description: string) =>
+    request<AiCategorization>('/ai/categorize', json({ title, description })),
+  aiReply: (id: number) =>
+    request<AiReply>(`/tickets/${id}/ai/suggest-response`, { method: 'POST' }),
+  duplicates: (id: number) => request<Duplicate[]>(`/tickets/${id}/duplicates`),
   reopenTicket: (id: number) => request<Ticket>(`/tickets/${id}/reopen`, { method: 'POST' }),
   listComments: (id: number) => request<Comment[]>(`/tickets/${id}/comments`),
   addComment: (id: number, content: string) =>

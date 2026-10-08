@@ -84,3 +84,45 @@ def auth_headers():
 def admin_auth_headers():
     """Provide authorization headers with demo admin token."""
     return {"Authorization": "Bearer demo-token-admin-1"}
+
+
+class FakeMessages:
+    """Stands in for client.messages: records calls, returns a canned parsed answer."""
+
+    def __init__(self, parsed=None, stop_reason="end_turn", error=None):
+        self.parsed, self.stop_reason, self.error, self.calls = parsed, stop_reason, error, []
+
+    def parse(self, **kwargs):
+        from types import SimpleNamespace
+
+        self.calls.append(kwargs)
+        if self.error:
+            raise self.error
+        return SimpleNamespace(
+            parsed_output=self.parsed,
+            stop_reason=self.stop_reason,
+            usage=SimpleNamespace(input_tokens=10, output_tokens=5),
+        )
+
+
+@pytest.fixture
+def ai(monkeypatch):
+    """Enable AI with a configurable fake client; call the fixture to set its behaviour."""
+    from types import SimpleNamespace
+
+    from app.config import settings
+    from app.services import ai_service
+
+    monkeypatch.setattr(settings, "ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "ENABLE_AI_FEATURES", True)
+    ai_service._calls.clear()
+    holder = {}
+
+    def configure(**kw):
+        holder["messages"] = FakeMessages(**kw)
+        monkeypatch.setattr(
+            ai_service, "get_client", lambda: SimpleNamespace(messages=holder["messages"])
+        )
+        return holder["messages"]
+
+    return configure
