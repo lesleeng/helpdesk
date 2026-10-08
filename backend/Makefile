@@ -1,4 +1,4 @@
-.PHONY: help install run test lint format type-check coverage migrate upgrade downgrade clean
+.PHONY: seed help install run test lint format type-check coverage migrate upgrade downgrade clean
 
 VENV := venv
 PYTHON := $(VENV)/bin/python
@@ -64,3 +64,6 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	rm -rf .pytest_cache .coverage htmlcov .mypy_cache
 	rm -rf dist build *.egg-info
+
+seed:
+	$(PYTHON) -m app.seed

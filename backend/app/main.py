@@ -7,14 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.config import settings
-import app.models  # noqa: F401  (register models with Base metadata)
+from app import models as _models  # noqa: F401  (register models with Base metadata)
 from app.middleware.auth import AuthMiddleware
 
 
 # Configure logging
 logging.basicConfig(
-    level=settings.LOG_LEVEL,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=settings.LOG_LEVEL, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -55,20 +54,19 @@ async def root():
     }
 
 
-# Routes will be imported and included here
-# TODO: Import route modules
-# from app.routes import tickets, categories, comments, attachments, admin
+from app.routes import admin, ai, categories, kb, tickets, workflow  # noqa: E402
 
-# Include routers
-# app.include_router(tickets.router)
-# app.include_router(categories.router)
-# app.include_router(comments.router)
-# app.include_router(attachments.router)
-# app.include_router(admin.router)
+app.include_router(tickets.router)
+app.include_router(categories.router)
+app.include_router(admin.router)
+app.include_router(kb.router)
+app.include_router(workflow.router)
+app.include_router(ai.router)
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.API_HOST,

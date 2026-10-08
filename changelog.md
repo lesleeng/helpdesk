@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Milestone 1.1 + 1.2 backend)
+- FastAPI scaffold, SQLAlchemy models, Alembic environment, mock auth (`AUTH_MODE=mock`)
+- Ticket CRUD, status flow (admin transitions, user reopen within window), comments with
+  internal notes, attachments (type/size validated), history audit log, categories, admin dashboard
+- Category seed (`make seed`) with per-subcategory extra-field templates; `GET /me`;
+  34 pytest tests, ~94% coverage
+
+### Added (Milestone 1.3 frontend)
+- React + TypeScript + Vite app: mock-auth sign-in, Submit Ticket form with dynamic extra fields
+  and attachments, My Tickets (status filter, search, pagination), Ticket Detail (reopen,
+  attachments, comment thread); 10 Vitest tests; verified end-to-end in a browser
+
+### Added (Milestone 3.1: Phase 3 backend)
+- Knowledge base: articles (draft/published), keyword search with ranking, suggestions, links to tickets
+- Manager approval for access/licence requests: tickets wait in `pending` until the requester's
+  manager (or an admin) approves; rejection cancels the ticket; self-approval is blocked
+- Post-resolution feedback survey (1-5 + comment) with satisfaction in the report
+- Custom SLA targets per category (admin), used when tickets are created
+- Claude assistance (off by default): category/urgency suggestion for new tickets and a drafted
+  reply grounded in knowledge base articles for staff; local duplicate-ticket detection
+- Migration 0003 (verified on PostgreSQL 16); 93 pytest tests, ~96% coverage
+
+### Added (Milestone 2.2: Phase 2 frontend)
+- Ticket Detail: admin Assignee select, SLA line (status, response/resolution due), tech staff can
+  work tickets assigned to them (status, priority, history) but not reassign
+- All Tickets: priority, date-range, assignee and "SLA breached" filters; Assignee and SLA columns;
+  row selection with a bulk bar (status, priority, assign) that reports tickets it could not update
+- "Assigned to me" page for tech staff; admin Reports page; "Tina Tech (tech)" demo sign-in
+- 28 Vitest tests; Playwright smoke test now covers bulk assign, tech work and the report
+
+### Added (Milestone 2.1: Phase 2 backend)
+- Tech staff role: sees and works only tickets assigned to them; admins assign (`PUT /tickets/{id}/assignee`)
+- SLA tracking: response/resolution due dates (24h/72h defaults), first-response tracking,
+  `sla_status` (ok/at_risk/breached/met), `sla_breached` filter; does not pause on hold
+- Bulk actions (`POST /tickets/bulk`, partial failures reported), advanced filters
+  (priority, assignee, unassigned, date range), `GET /reports`, `GET /staff`
+- Email notifications (created, status change, comment, assignment) via SMTP background tasks,
+  off unless `ENABLE_EMAIL_NOTIFICATIONS=true`; migration 0002 (backfills SLA dates, verified on PostgreSQL 16)
+- 58 pytest tests, ~95% coverage
+
+### Added (Milestone 1.4 admin + launch prep)
+- Admin UI: All Tickets (category/status/search filters, priority + submitter columns), status and
+  priority changes limited to allowed transitions, audit history, Dashboard with breakdown tables
+- `GET /tickets?mine=true` so admins' "My Tickets" lists only their own
+- Initial Alembic migration (verified on PostgreSQL 16: upgrade/downgrade/check)
+- Dockerfiles, nginx config, docker-compose (not yet run); Playwright smoke test in `e2e/`
+- 17 Vitest tests, 35 pytest tests
+
 ### Planning
 - MVP Phase 1 specifications complete
 - Database schema designed

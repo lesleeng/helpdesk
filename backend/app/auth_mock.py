@@ -3,9 +3,7 @@ Mock authentication service for development.
 Simulates workmate's auth system with demo users.
 Can be replaced with real auth when WORKMATE_AUTH_URL is available.
 """
-from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-import json
 
 
 DEMO_USERS = {
@@ -15,6 +13,7 @@ DEMO_USERS = {
         "email": "john.smith@company.com",
         "department": "IT Support",
         "role": "user",
+        "manager_id": "manager-1",
     },
     "demo-token-user-2": {
         "id": "user-2",
@@ -22,6 +21,28 @@ DEMO_USERS = {
         "email": "jane.doe@company.com",
         "department": "Finance",
         "role": "user",
+        "manager_id": "manager-1",
+    },
+    "demo-token-manager-1": {
+        "id": "manager-1",
+        "name": "Maria Manager",
+        "email": "maria.manager@company.com",
+        "department": "Operations",
+        "role": "user",
+    },
+    "demo-token-tech-1": {
+        "id": "tech-1",
+        "name": "Tina Tech",
+        "email": "tina.tech@company.com",
+        "department": "IT Support",
+        "role": "tech",
+    },
+    "demo-token-tech-2": {
+        "id": "tech-2",
+        "name": "Tom Tech",
+        "email": "tom.tech@company.com",
+        "department": "IT Support",
+        "role": "tech",
     },
     "demo-token-admin-1": {
         "id": "admin-1",

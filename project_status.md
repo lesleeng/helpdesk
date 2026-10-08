@@ -1,8 +1,12 @@
 # Project Status - Helpdesk Module
 
-**Last Updated:** October 6, 2026  
-**Current Phase:** MVP Planning  
-**Next Milestone:** Backend & Database Setup (Weeks 1-2)
+**Last Updated:** October 7, 2026  
+**Current Phase:** Phase 3 (3.1 backend done; 3.2 frontend next)  
+**Next Milestone:** 3.2 Phase 3 frontend (knowledge base, approvals, feedback, SLA rules, AI assist, mobile layout); then workmate integration and deployment verification
+
+> Milestones 1.1 (DB/models/mock auth), 1.2 (backend API) and 1.3 (frontend user pages) and 1.4 (admin pages, migration, Docker files) are implemented on branch
+> `claude/awesome-knuth-exyhqw`. Open items: run `docker compose up` (Docker files untested);
+> admin list lacks the spec's date-range filter and bulk actions; swap `AUTH_MODE=production` once workmate's auth details arrive.
 
 ---
 

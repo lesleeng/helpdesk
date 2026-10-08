@@ -3,6 +3,7 @@ Ticket category and subcategory models.
 Defines the 4 main request categories and 28 subcategories.
 """
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, JSON, Boolean, DateTime
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -11,6 +12,7 @@ from app.database import Base
 
 class TicketCategory(Base):
     """Main ticket categories (Service, Incident, Maintenance, HR-Init)."""
+
     __tablename__ = "ticket_categories"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -22,7 +24,9 @@ class TicketCategory(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    subcategories = relationship("TicketSubcategory", back_populates="category", cascade="all, delete-orphan")
+    subcategories = relationship(
+        "TicketSubcategory", back_populates="category", cascade="all, delete-orphan"
+    )
     tickets = relationship("Ticket", back_populates="category")
 
     def __repr__(self):
@@ -31,15 +35,19 @@ class TicketCategory(Base):
 
 class TicketSubcategory(Base):
     """Subcategories under each main category."""
+
     __tablename__ = "ticket_subcategories"
 
     id = Column(Integer, primary_key=True, index=True)
-    category_id = Column(Integer, ForeignKey("ticket_categories.id", ondelete="CASCADE"), nullable=False)
+    category_id = Column(
+        Integer, ForeignKey("ticket_categories.id", ondelete="CASCADE"), nullable=False
+    )
     name = Column(String(100), nullable=False, index=True)
     description = Column(Text)
     order = Column(Integer, default=0)
     active = Column(Boolean, default=True)
     extra_fields_template = Column(JSON, default=dict)  # Template for extra fields
+    requires_approval = Column(Boolean, default=False, server_default=sa_false(), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -56,6 +64,7 @@ class TicketExtraFields(Base):
     Dynamic extra fields per ticket.
     Stores category-specific data (access request details, equipment type, etc.)
     """
+
     __tablename__ = "ticket_extra_fields"
 
     id = Column(Integer, primary_key=True, index=True)

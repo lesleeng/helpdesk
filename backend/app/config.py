@@ -21,8 +21,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/helpdesk_db"
+        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/helpdesk_db"
     )
 
     # Auth Mode: "mock" for development, "production" for real auth
@@ -37,19 +36,34 @@ class Settings(BaseSettings):
     # File Storage
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
     MAX_UPLOAD_SIZE_MB: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "50"))
-    ALLOWED_FILE_TYPES: str = os.getenv(
-        "ALLOWED_FILE_TYPES",
-        "pdf,jpg,jpeg,png,docx,xlsx,txt"
-    )
+    ALLOWED_FILE_TYPES: str = os.getenv("ALLOWED_FILE_TYPES", "pdf,jpg,jpeg,png,docx,xlsx,txt")
 
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     # CORS
     ALLOWED_ORIGINS: str = os.getenv(
-        "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://localhost:5173"
+        "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173"
     )
+
+    # Email notifications (disabled by default)
+    ENABLE_EMAIL_NOTIFICATIONS: bool = (
+        os.getenv("ENABLE_EMAIL_NOTIFICATIONS", "false").lower() == "true"
+    )
+    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "localhost")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "25"))
+    SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
+    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
+    SMTP_STARTTLS: bool = os.getenv("SMTP_STARTTLS", "false").lower() == "true"
+    SMTP_FROM_ADDRESS: str = os.getenv("SMTP_FROM_ADDRESS", "helpdesk@localhost")
+    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:5173")
+
+    # AI (Claude API) - needs ENABLE_AI_FEATURES=true and an API key
+    ENABLE_AI_FEATURES: bool = os.getenv("ENABLE_AI_FEATURES", "false").lower() == "true"
+    ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
+    AI_MODEL: str = os.getenv("AI_MODEL", "claude-opus-5-5")
+    AI_MAX_TOKENS: int = int(os.getenv("AI_MAX_TOKENS", "4096"))
+    AI_RATE_LIMIT_PER_HOUR: int = int(os.getenv("AI_RATE_LIMIT_PER_HOUR", "30"))
 
     # Ticket Settings
     DEFAULT_TICKET_STATUS: str = "open"

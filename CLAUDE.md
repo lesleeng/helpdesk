@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Start
 
 **Project:** Internal IT Help Desk Module  
-**Status:** MVP planning phase (no code yet)  
+**Status:** Phase 1 and 2 complete; Phase 3 backend done (knowledge base, manager approvals, feedback survey, per-category SLA, Claude assistance); Phase 3 frontend next; remaining: workmate auth/user-directory integration and deployment verification  
 **Stack:** React (frontend) + Python FastAPI (backend) + PostgreSQL (database)  
 **Documentation:** See `project_spec.md` for full requirements and architecture
 
@@ -64,6 +64,8 @@ helpdesk/
 │   ├── .env.local        # Local environment (DO NOT COMMIT)
 │   └── tsconfig.json
 │
+├── e2e/                  # Playwright smoke test (npm install && npm run smoke)
+├── docker-compose.yml    # db + backend + frontend (untested: needs Docker)
 ├── docs/                 # Additional documentation
 │   └── api.md            # API documentation (when built)
 │
@@ -192,7 +194,7 @@ See `project_spec.md` for full schema.
 1. Frontend passes auth token (JWT/session) from workmate's system.
 2. Backend validates token against workmate's auth service.
 3. Backend queries workmate's `users` table to populate user info on tickets.
-4. Role check: User vs Admin (Tech Staff added Phase 2).
+4. Role check: user, tech (assigned tickets only), admin (everything); plus the requester's manager as approver for access/licence requests. Names, emails, staff list and managers come from `app/services/directory.py`; production mode is not integrated yet (no emails, no managers, `/staff` returns 501).
 
 **Environment variables:**
 - `WORKMATE_AUTH_URL` — Where to validate tokens
@@ -203,14 +205,23 @@ See `project_spec.md` for full schema.
 
 All endpoints prefixed with `/api/helpdesk/`:
 
-- `GET /tickets` — List (own if user, all if admin)
+- `GET /tickets` — List (own if user, assigned + own if tech, all if admin)
 - `POST /tickets` — Create
 - `GET /tickets/{id}` — Detail
-- `PATCH /tickets/{id}` — Update status/priority (admin only)
+- `PATCH /tickets/{id}` — Update status/priority (admin, or tech on assigned tickets)
 - `POST /tickets/{id}/comments` — Add comment
 - `GET /tickets/{id}/comments` — List comments
-- `GET /tickets/{id}/history` — Audit log (admin only)
+- `GET /tickets/{id}/history` — Audit log (admin, or tech on assigned tickets)
 - `POST /tickets/{id}/attachments` — Upload file
+- `PUT /tickets/{id}/assignee` — Assign/unassign (admin)
+- `POST /tickets/bulk` — Bulk status/priority/assignee (admin)
+- `GET /staff`, `GET /reports` — Staff directory, SLA/workload report (admin)
+- `GET/POST/PATCH/DELETE /kb/articles`, `GET /kb/suggest`, `GET/POST/DELETE /tickets/{id}/kb` — Knowledge base and ticket links (write: admin; link: staff on the ticket)
+- `GET /approvals`, `POST /tickets/{id}/approval` — Manager approval (approve/reject)
+- `POST /tickets/{id}/feedback` — Satisfaction survey (submitter, resolved/closed tickets)
+- `GET/PUT/DELETE /sla-rules[/{category_id}]` — Per-category SLA targets (admin)
+- `GET /ai/status`, `POST /ai/categorize`, `POST /tickets/{id}/ai/suggest-response`, `GET /tickets/{id}/duplicates` — AI assistance (advisory; needs `ENABLE_AI_FEATURES=true` + `ANTHROPIC_API_KEY`)
+- `GET /tickets` filters: `status, category_id, priority, search, mine, assignee_id, unassigned, created_from, created_to, sla_breached`
 
 See `project_spec.md` API section for complete list.
 
@@ -236,7 +247,7 @@ See `project_spec.md` API section for complete list.
 **Frontend:**
 - **Style:** ESLint + Prettier
 - **Language:** TypeScript (strict mode)
-- **Testing:** Jest + React Testing Library
+- **Testing:** Vitest (Jest-compatible API) + React Testing Library
 - **Component naming:** PascalCase, files match component name
 
 ## When to Update Auto-Updated Docs
