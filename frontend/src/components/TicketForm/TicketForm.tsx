@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDebounced } from '../../hooks/useDebounced'
 import { api } from '../../services/api'
-import type { Urgency } from '../../types'
+import type { TicketDraft, Urgency } from '../../types'
 import DynamicFields from './DynamicFields'
 
 export default function TicketForm({ onCreated }: { onCreated: (id: number) => void }) {
   const qc = useQueryClient()
-  const [categoryId, setCategoryId] = useState<number | ''>('')
-  const [subcategoryId, setSubcategoryId] = useState<number | ''>('')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [urgency, setUrgency] = useState<Urgency>('medium')
+  const draft = (useLocation().state as { draft?: TicketDraft } | null)?.draft
+  const [categoryId, setCategoryId] = useState<number | ''>(draft?.category_id ?? '')
+  const [subcategoryId, setSubcategoryId] = useState<number | ''>(draft?.subcategory_id ?? '')
+  const [title, setTitle] = useState(draft?.title ?? '')
+  const [description, setDescription] = useState(draft?.description ?? '')
+  const [urgency, setUrgency] = useState<Urgency>(draft?.urgency ?? 'medium')
   const [extra, setExtra] = useState<Record<string, string>>({})
   const [files, setFiles] = useState<File[]>([])
   const [warning, setWarning] = useState<string | null>(null)

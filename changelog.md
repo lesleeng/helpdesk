@@ -72,6 +72,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Technology stack finalized (React + Python FastAPI + PostgreSQL)
 - Architecture documented
 
+## Milestone 4 (Phase 3+)
+
+- Analytics page (volume, backlog age, resolution by category, SLA and satisfaction by week) with CSV export.
+- Signed webhooks (HMAC-SHA256, retries, delivery log, SSRF guard) and optional Slack notifications.
+- Admin request-form editor: request types and custom fields with validation.
+- Assistant chat grounded in the knowledge base, can draft a ticket (needs `ENABLE_AI_FEATURES`).
+- Migration 0004; 164 backend and 108 frontend tests.
+
 ---
 
 ## Phase 1 (MVP) - Planned

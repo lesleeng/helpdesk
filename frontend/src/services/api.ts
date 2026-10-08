@@ -4,6 +4,14 @@ import type {
   BulkInput,
   BulkResult,
   AiCategorization,
+  Analytics,
+  ChatMessage,
+  ChatReply,
+  Delivery,
+  ExtraFieldDef,
+  IntegrationsStatus,
+  Webhook,
+  WebhookCreated,
   AiReply,
   AiStatus,
   Duplicate,
@@ -87,6 +95,7 @@ async function request<T>(
     throw new ApiError(res.status, message)
   }
   if (res.status === 204) return undefined as T
+  if ((res.headers.get('content-type') ?? '').startsWith('text/csv')) return (await res.text()) as T
   return res.json() as Promise<T>
 }
 
@@ -179,6 +188,34 @@ export const api = {
   aiReply: (id: number) =>
     request<AiReply>(`/tickets/${id}/ai/suggest-response`, { method: 'POST' }),
   duplicates: (id: number) => request<Duplicate[]>(`/tickets/${id}/duplicates`),
+  analytics: (days: number) => request<Analytics>(`/analytics?days=${days}`),
+  ticketsCsv: () => request<string>('/reports/tickets.csv'),
+  integrations: () => request<IntegrationsStatus>('/integrations'),
+  webhooks: () => request<Webhook[]>('/webhooks'),
+  createWebhook: (data: { name: string; url: string; events: string[] }) =>
+    request<WebhookCreated>('/webhooks', json(data)),
+  updateWebhook: (id: number, data: { active?: boolean }) =>
+    request<Webhook>(`/webhooks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  rotateWebhook: (id: number) =>
+    request<WebhookCreated>(`/webhooks/${id}/rotate-secret`, { method: 'POST' }),
+  testWebhook: (id: number) => request<Delivery>(`/webhooks/${id}/test`, { method: 'POST' }),
+  deleteWebhook: (id: number) => request<void>(`/webhooks/${id}`, { method: 'DELETE' }),
+  deliveries: (id: number) => request<Delivery[]>(`/webhooks/${id}/deliveries`),
+  allSubcategories: (categoryId: number) =>
+    request<Subcategory[]>(`/categories/${categoryId}/subcategories?include_inactive=true`),
+  createSubcategory: (categoryId: number, data: { name: string; requires_approval: boolean }) =>
+    request<Subcategory>(`/categories/${categoryId}/subcategories`, json(data)),
+  updateSubcategory: (
+    id: number,
+    data: { name?: string; requires_approval?: boolean; active?: boolean },
+  ) =>
+    request<Subcategory>(`/subcategories/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  setFields: (id: number, fields: ExtraFieldDef[]) =>
+    request<Subcategory>(`/subcategories/${id}/fields`, {
+      method: 'PUT',
+      body: JSON.stringify({ fields }),
+    }),
+  chat: (messages: ChatMessage[]) => request<ChatReply>('/ai/chat', json({ messages })),
   reopenTicket: (id: number) => request<Ticket>(`/tickets/${id}/reopen`, { method: 'POST' }),
   listComments: (id: number) => request<Comment[]>(`/tickets/${id}/comments`),
   addComment: (id: number, content: string) =>

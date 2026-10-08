@@ -222,6 +222,9 @@ All endpoints prefixed with `/api/helpdesk/`:
 - `POST /tickets/{id}/feedback` — Satisfaction survey (submitter, resolved/closed tickets)
 - `GET/PUT/DELETE /sla-rules[/{category_id}]` — Per-category SLA targets (admin)
 - `GET /ai/status`, `POST /ai/categorize`, `POST /tickets/{id}/ai/suggest-response`, `GET /tickets/{id}/duplicates` — AI assistance (advisory; needs `ENABLE_AI_FEATURES=true` + `ANTHROPIC_API_KEY`)
+- `GET /analytics`, `GET /reports/tickets.csv` — Analytics and CSV export (admin)
+- `GET/POST/PATCH/DELETE /webhooks`, `/webhooks/{id}/{rotate-secret,test,deliveries}`, `GET /integrations` — Webhooks (admin)
+- `POST/PATCH /categories/{id}/subcategories`, `PUT /subcategories/{id}/fields` — Request-form editor (admin); `POST /ai/chat` — assistant
 - `GET /tickets` filters: `status, category_id, priority, search, mine, assignee_id, unassigned, created_from, created_to, sla_breached`
 
 See `project_spec.md` API section for complete list.

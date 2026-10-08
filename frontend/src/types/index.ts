@@ -23,6 +23,7 @@ export interface ExtraFieldDef {
   label: string
   type: 'text' | 'textarea' | 'date' | 'number' | 'select'
   options?: string[]
+  required?: boolean
 }
 
 export interface Subcategory {
@@ -32,6 +33,7 @@ export interface Subcategory {
   description?: string | null
   extra_fields_template?: { fields?: ExtraFieldDef[] } | null
   requires_approval?: boolean
+  active?: boolean
 }
 
 export interface Ticket {
@@ -217,4 +219,72 @@ export interface Duplicate {
   title: string
   status: string
   score: number
+}
+
+export interface Analytics {
+  days: number
+  totals: {
+    created: number
+    resolved: number
+    avg_first_response_hours?: number | null
+    avg_resolution_hours?: number | null
+    reopen_rate_pct?: number | null
+  }
+  volume: { date: string; created: number; resolved: number }[]
+  backlog_age: { bucket: string; count: number }[]
+  resolution_by_category: { category: string; avg_hours?: number | null; resolved: number }[]
+  sla_by_week: { week_start: string; met: number; total: number; pct: number }[]
+  satisfaction_by_week: { week_start: string; avg_rating?: number | null; count: number }[]
+}
+
+export interface Webhook {
+  id: number
+  name: string
+  url: string
+  events: string[]
+  active: boolean
+  created_at: string
+  last_status?: string | null
+  last_delivery_at?: string | null
+}
+
+export interface WebhookCreated extends Webhook {
+  secret: string
+}
+
+export interface Delivery {
+  id: number
+  event: string
+  ticket_id?: number | null
+  status: string
+  response_code?: number | null
+  attempts: number
+  error?: string | null
+  created_at: string
+  delivered_at?: string | null
+}
+
+export interface IntegrationsStatus {
+  slack_enabled: boolean
+  webhook_events: string[]
+  allow_private_webhooks: boolean
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface TicketDraft {
+  title: string
+  description: string
+  category_id: number
+  subcategory_id?: number | null
+  urgency: Urgency
+}
+
+export interface ChatReply {
+  answer: string
+  articles: KbArticle[]
+  ticket_draft?: TicketDraft | null
 }

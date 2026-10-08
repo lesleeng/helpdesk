@@ -1,8 +1,8 @@
 # Project Status - Helpdesk Module
 
 **Last Updated:** October 7, 2026  
-**Current Phase:** Phase 3 complete (3.1 backend, 3.2 frontend)  
-**Next Milestone:** workmate integration (auth, user directory, managers) and deployment verification; then Phase 3+ (Slack, chatbot, webhooks)
+**Current Phase:** Milestone 4 (Phase 3+) complete: analytics, webhooks and Slack, request-form editor, assistant chat  
+**Next Milestone:** workmate integration (auth, user directory, managers) and deployment verification; then production hardening
 
 > Milestones 1.1 (DB/models/mock auth), 1.2 (backend API) and 1.3 (frontend user pages) and 1.4 (admin pages, migration, Docker files) are implemented on branch
 > `claude/awesome-knuth-exyhqw`. Open items: run `docker compose up` (Docker files untested);

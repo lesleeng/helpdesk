@@ -7,7 +7,11 @@ import MyTickets from './pages/MyTickets'
 import SubmitTicket from './pages/SubmitTicket'
 import TicketDetail from './pages/TicketDetail'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminAnalytics from './pages/AdminAnalytics'
 import AdminReports from './pages/AdminReports'
+import Assistant from './pages/Assistant'
+import Integrations from './pages/Integrations'
+import RequestForms from './pages/RequestForms'
 import Approvals from './pages/Approvals'
 import KnowledgeArticle from './pages/KnowledgeArticle'
 import KnowledgeArticleForm from './pages/KnowledgeArticleForm'
@@ -89,6 +93,31 @@ export default function App() {
           }
         />
         <Route path="/approvals" element={<Approvals />} />
+        <Route path="/assistant" element={<Assistant />} />
+        <Route
+          path="/admin/analytics"
+          element={
+            <RequireAdmin>
+              <AdminAnalytics />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/forms"
+          element={
+            <RequireAdmin>
+              <RequestForms />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/integrations"
+          element={
+            <RequireAdmin>
+              <Integrations />
+            </RequireAdmin>
+          }
+        />
         <Route
           path="/admin/sla"
           element={

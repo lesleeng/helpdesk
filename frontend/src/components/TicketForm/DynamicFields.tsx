@@ -14,11 +14,24 @@ export default function DynamicFields({ fields, values, onChange }: Props) {
         const value = values[f.name] ?? ''
         return (
           <div className="field" key={f.name}>
-            <label htmlFor={id}>{f.label}</label>
+            <label htmlFor={id}>
+              {f.label}
+              {f.required && ' *'}
+            </label>
             {f.type === 'textarea' ? (
-              <textarea id={id} value={value} onChange={(e) => onChange(f.name, e.target.value)} />
+              <textarea
+                id={id}
+                required={f.required}
+                value={value}
+                onChange={(e) => onChange(f.name, e.target.value)}
+              />
             ) : f.type === 'select' ? (
-              <select id={id} value={value} onChange={(e) => onChange(f.name, e.target.value)}>
+              <select
+                id={id}
+                required={f.required}
+                value={value}
+                onChange={(e) => onChange(f.name, e.target.value)}
+              >
                 <option value="">--</option>
                 {f.options?.map((o) => (
                   <option key={o} value={o}>
@@ -30,6 +43,7 @@ export default function DynamicFields({ fields, values, onChange }: Props) {
               <input
                 id={id}
                 type={f.type}
+                required={f.required}
                 value={value}
                 onChange={(e) => onChange(f.name, e.target.value)}
               />

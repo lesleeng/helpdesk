@@ -128,14 +128,23 @@ const SUB_NAMES: Record<number, string[]> = {
   3: ['Preventive maintenance', 'System update', 'Hardware upgrade', 'Equipment replacement'],
   4: ['Employee onboarding', 'Offboarding', 'Department transfer'],
 }
+interface Sub {
+  id: number
+  category_id: number
+  name: string
+  extra_fields_template: { fields: ExtraFieldDef[] }
+  requires_approval: boolean
+  active: boolean
+}
 let nextSub = 1
-const SUBS = CATEGORIES.flatMap((c) =>
+const SUBS: Sub[] = CATEGORIES.flatMap((c) =>
   SUB_NAMES[c.id].map((name) => ({
     id: nextSub++,
     category_id: c.id,
     name,
     extra_fields_template: { fields: FIELDS[c.id] },
     requires_approval: name === 'Access request' || name === 'License assignment',
+    active: true,
   })),
 )
 const sub = (name: string) => SUBS.find((s) => s.name === name)!
@@ -415,6 +424,273 @@ function seed() {
 }
 seed()
 
+// ---- synthetic history, so trends and charts have something to show ----
+function seedHistory() {
+  let state = 7
+  const rand = () => {
+    state = (state + 0x6d2b79f5) | 0
+    let t = Math.imul(state ^ (state >>> 15), 1 | state)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+  const kinds: [string, string][] = [
+    ['Password reset', 'Locked out after too many attempts'],
+    ['Internet problem', 'VPN keeps disconnecting'],
+    ['Printer issue', 'Printer offline on the 3rd floor'],
+    ['Software install', 'Need Visio installed'],
+    ['Hardware failure', 'Laptop will not charge'],
+    ['Email setup', 'Mailbox not syncing on phone'],
+    ['Equipment replacement', 'Replace a broken keyboard'],
+    ['App error', 'Expense app shows an error on save'],
+  ]
+  for (let i = 0; i < 70; i++) {
+    const [subName, title] = kinds[Math.floor(rand() * kinds.length)]
+    const age = 1 + Math.floor(rand() * 58) * 24 + Math.floor(rand() * 20)
+    const open = age < 70 && rand() < 0.45
+    const response = 0.5 + rand() * (rand() < 0.15 ? 40 : 10)
+    const resolution = response + 1 + rand() * (rand() < 0.2 ? 90 : 30)
+    const r = makeTicket({
+      id: 10 + i,
+      owner: i % 2 ? 'user-1' : 'user-2',
+      title: `${title} (#${10 + i})`,
+      description: `${title}. Raised during the day, details in the thread.`,
+      sub: subName,
+      ageHours: age,
+      assignee: open ? (i % 3 === 0 ? null : 'tech-1') : i % 2 ? 'tech-2' : 'tech-1',
+      status: open ? 'in_progress' : 'resolved',
+      priority: (['low', 'medium', 'medium', 'high'] as Priority[])[Math.floor(rand() * 4)],
+      firstResponseAfterHours: open && rand() < 0.3 ? undefined : response,
+      resolvedAfterHours: open ? undefined : Math.min(resolution, age - 0.2),
+    })
+    if (!open && rand() < 0.35) {
+      r.t.status = 'closed'
+      r.t.closed_at = r.t.resolved_at
+    }
+    if (!open && r.t.resolved_at && rand() < 0.5) {
+      const rating = rand() < 0.65 ? 5 : rand() < 0.6 ? 4 : rand() < 0.5 ? 3 : 2
+      r.feedback = { rating, comment: null, created_at: iso(ms(r.t.resolved_at) + 2 * HOUR) }
+    }
+    if (!open && rand() < 0.06) r.t.reopen_count = 1
+  }
+}
+seedHistory()
+
+// ---- integrations (simulated) ----
+const EVENTS = [
+  'ticket.created',
+  'ticket.status_changed',
+  'ticket.assigned',
+  'ticket.commented',
+  'ticket.approval_requested',
+  'ticket.approval_decided',
+  'ticket.feedback_submitted',
+]
+interface Hook {
+  id: number
+  name: string
+  url: string
+  events: string[]
+  active: boolean
+  created_at: string
+  secret: string
+}
+interface Delivery {
+  id: number
+  hook: number
+  event: string
+  ticket_id: number | null
+  status: string
+  response_code: number | null
+  attempts: number
+  error: string | null
+  created_at: string
+  delivered_at: string | null
+}
+const hooks: Hook[] = []
+const deliveries: Delivery[] = []
+const PRIVATE_HOST =
+  /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.0\.0\.0|\[?::1\]?$)/i
+
+function emitEvent(event: string, ticketId: number | null) {
+  for (const h of hooks) {
+    if (!h.active || !(h.events.includes('*') || h.events.includes(event))) continue
+    deliveries.push({
+      id: nid(),
+      hook: h.id,
+      event,
+      ticket_id: ticketId,
+      status: 'success',
+      response_code: 200,
+      attempts: 1,
+      error: null,
+      created_at: iso(now()),
+      delivered_at: iso(now()),
+    })
+  }
+}
+const hookOut = (h: Hook) => {
+  const last = [...deliveries].reverse().find((d) => d.hook === h.id)
+  return {
+    id: h.id,
+    name: h.name,
+    url: h.url,
+    events: h.events,
+    active: h.active,
+    created_at: h.created_at,
+    last_status: last?.status ?? null,
+    last_delivery_at: last?.created_at ?? null,
+  }
+}
+function checkHook(url: string, events: string[]) {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    fail(422, 'URL must start with http:// or https://')
+  }
+  need(
+    ['http:', 'https:'].includes(parsed.protocol),
+    422,
+    'URL must start with http:// or https://',
+  )
+  need(!parsed.username && !parsed.password, 422, 'URL must not contain credentials')
+  need(!PRIVATE_HOST.test(parsed.hostname), 422, 'URL points to a private or internal address')
+  const bad = events.find((e) => e !== '*' && !EVENTS.includes(e))
+  need(!bad, 422, `Unknown event: ${bad}`)
+}
+const secretFor = () =>
+  `whsec_demo_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`
+
+// ---- request forms ----
+function validateExtra(s: Sub | undefined, values: Record<string, string>): Record<string, string> {
+  const fields = s?.extra_fields_template.fields ?? []
+  const clean: Record<string, string> = {}
+  if (!fields.length) {
+    for (const [k, v] of Object.entries(values)) if (String(v).trim()) clean[k] = String(v).trim()
+    return clean
+  }
+  const defined = Object.fromEntries(fields.map((f) => [f.name, f]))
+  for (const [name, raw] of Object.entries(values)) {
+    const spec = defined[name]
+    need(spec, 422, `Unknown field: ${name}`)
+    const value = String(raw).trim()
+    if (!value) continue
+    need(value.length <= 500, 422, `${spec.label} is too long (500 characters at most)`)
+    need(
+      spec.type !== 'number' || /^-?\d+(\.\d+)?$/.test(value),
+      422,
+      `${spec.label} must be a number`,
+    )
+    need(
+      spec.type !== 'date' ||
+        (/^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value))),
+      422,
+      `${spec.label} must be a date (YYYY-MM-DD)`,
+    )
+    need(
+      spec.type !== 'select' || (spec.options ?? []).includes(value),
+      422,
+      `${spec.label} must be one of the listed options`,
+    )
+    clean[name] = value
+  }
+  for (const f of fields) need(!f.required || clean[f.name], 422, `${f.label} is required`)
+  return clean
+}
+
+// ---- analytics ----
+const weekStart = (t: number) => {
+  const d = new Date(t)
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
+  return d.toISOString().slice(0, 10)
+}
+const avgOf = (xs: number[]) =>
+  xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100 : null
+function analytics(days: number) {
+  const n = now()
+  const dates = Array.from({ length: days }, (_, i) => iso(n - (days - 1 - i) * DAY).slice(0, 10))
+  const start = new Date(`${dates[0]}T00:00:00Z`).getTime()
+  const created: Record<string, number> = {}
+  const resolved: Record<string, number> = {}
+  for (const { t } of tickets) {
+    if (ms(t.created_at) >= start)
+      created[t.created_at.slice(0, 10)] = (created[t.created_at.slice(0, 10)] ?? 0) + 1
+    if (t.resolved_at && ms(t.resolved_at) >= start)
+      resolved[t.resolved_at.slice(0, 10)] = (resolved[t.resolved_at.slice(0, 10)] ?? 0) + 1
+  }
+  const active = tickets.filter((r) => ['open', 'in_progress', 'on_hold'].includes(r.t.status))
+  const ageDays = (r: Rec) => (n - ms(r.t.created_at)) / DAY
+  const buckets: [string, number, number][] = [
+    ['Under 1 day', 0, 1],
+    ['1-3 days', 1, 3],
+    ['3-7 days', 3, 7],
+    ['Over 7 days', 7, Infinity],
+  ]
+  const inRange = tickets.filter((r) => ms(r.t.created_at) >= start)
+  const done = tickets.filter((r) => r.t.resolved_at && ms(r.t.resolved_at) >= start)
+  const hrs = (a: string, b: string) => (ms(b) - ms(a)) / HOUR
+  const byCat: Record<string, number[]> = {}
+  done.forEach((r) => {
+    const name = CATEGORIES.find((c) => c.id === r.t.category_id)!.name
+    ;(byCat[name] ??= []).push(hrs(r.t.created_at, r.t.resolved_at!))
+  })
+  const sla: Record<string, [number, number]> = {}
+  done.forEach((r) => {
+    const row = (sla[weekStart(ms(r.t.resolved_at!))] ??= [0, 0])
+    row[1] += 1
+    if (slaState(r.t) === 'met') row[0] += 1
+  })
+  const sat: Record<string, number[]> = {}
+  tickets.forEach((r) => {
+    if (r.feedback && ms(r.feedback.created_at) >= start)
+      (sat[weekStart(ms(r.feedback.created_at))] ??= []).push(r.feedback.rating)
+  })
+  const responded = inRange.filter((r) => r.t.first_response_at)
+  return {
+    days,
+    totals: {
+      created: inRange.length,
+      resolved: done.length,
+      avg_first_response_hours: avgOf(
+        responded.map((r) => hrs(r.t.created_at, r.t.first_response_at!)),
+      ),
+      avg_resolution_hours: avgOf(done.map((r) => hrs(r.t.created_at, r.t.resolved_at!))),
+      reopen_rate_pct: inRange.length
+        ? Math.round((1000 * inRange.filter((r) => r.t.reopen_count > 0).length) / inRange.length) /
+          10
+        : null,
+    },
+    volume: dates.map((date) => ({
+      date,
+      created: created[date] ?? 0,
+      resolved: resolved[date] ?? 0,
+    })),
+    backlog_age: buckets.map(([bucket, lo, hi]) => ({
+      bucket,
+      count: active.filter((r) => ageDays(r) >= lo && ageDays(r) < hi).length,
+    })),
+    resolution_by_category: Object.entries(byCat)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([category, v]) => ({ category, avg_hours: avgOf(v), resolved: v.length })),
+    sla_by_week: Object.entries(sla)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week_start, [met, total]]) => ({
+        week_start,
+        met,
+        total,
+        pct: Math.round((1000 * met) / total) / 10,
+      })),
+    satisfaction_by_week: Object.entries(sat)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week_start, v]) => ({ week_start, avg_rating: avgOf(v), count: v.length })),
+  }
+}
+const csvCell = (v: unknown) => {
+  const text = v == null ? '' : String(v)
+  const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text
+  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
+}
+
 // ---- helpers ----
 const isAdmin = (u: User) => u.role === 'admin'
 const canManage = (r: Rec, u: User) =>
@@ -518,6 +794,7 @@ function applyStatus(r: Rec, u: User, status: TicketStatus) {
   if (status === 'resolved') r.t.resolved_at = iso(now())
   if (status === 'closed') r.t.closed_at = iso(now())
   r.t.status = status
+  emitEvent('ticket.status_changed', r.t.id)
 }
 function applyAssignee(r: Rec, u: User, id: string | null) {
   if (id !== null) need(['tech-1', 'tech-2', 'admin-1'].includes(id), 422, 'Unknown staff member')
@@ -525,6 +802,7 @@ function applyAssignee(r: Rec, u: User, id: string | null) {
   addHistory(r, u.id, 'assignee', r.t.assigned_to_id, id, 'assigned')
   r.t.assigned_to_id = id
   r.t.assigned_at = id ? iso(now()) : null
+  emitEvent('ticket.assigned', r.t.id)
 }
 
 // ---- AI (simulated) ----
@@ -583,8 +861,10 @@ export async function demoRequest<T>(
 
   if (method === 'GET' && path === '/me') return u as T
   if (method === 'GET' && path === '/categories') return CATEGORIES as T
-  if (method === 'GET' && (m = match(path, '/categories/(\\d+)/subcategories')))
-    return SUBS.filter((s) => s.category_id === num(m![0])) as T
+  if (method === 'GET' && (m = match(path, '/categories/(\\d+)/subcategories'))) {
+    const all = q.get('include_inactive') === 'true' && isAdmin(u)
+    return SUBS.filter((s) => s.category_id === num(m![0]) && (all || s.active)) as T
+  }
   if (method === 'GET' && path === '/staff') {
     mustBeAdmin(u)
     return Object.values(USERS).filter((x) => x.role !== 'user') as T
@@ -651,6 +931,8 @@ export async function demoRequest<T>(
       422,
       'Title and description are required',
     )
+    need(!s || s.active, 422, 'This request type is no longer available')
+    const extra = validateExtra(s, body.extra_fields ?? {})
     const manager = user.manager_id
     const r = makeTicket({
       id: nid(),
@@ -661,8 +943,9 @@ export async function demoRequest<T>(
       ageHours: 0,
       urgency: body.urgency,
       approver: s?.requires_approval ? (manager ?? '') : undefined,
-      extra: body.extra_fields ?? {},
+      extra,
     })
+    emitEvent('ticket.created', r.t.id)
     if (!s) r.t.subcategory_id = null
     if (s?.requires_approval && !manager) r.t.approver_id = null
     r.t.category_id = body.category_id
@@ -742,6 +1025,7 @@ export async function demoRequest<T>(
       created_at: iso(now()),
     }
     r.comments.push(c)
+    if (!c.is_internal) emitEvent('ticket.commented', r.t.id)
     if (!c.is_internal && !r.t.first_response_at && canManage(r, u) && r.t.user_id !== u.id)
       r.t.first_response_at = iso(now())
     addHistory(r, u.id, 'comment', null, c.is_internal ? 'internal' : 'public', 'comment_added')
@@ -1024,6 +1308,195 @@ export async function demoRequest<T>(
       by_assignee: Object.entries(load)
         .map(([assignee_id, v]) => ({ assignee_id, ...v }))
         .sort((a, b) => a.assignee_id.localeCompare(b.assignee_id)),
+    } as T
+  }
+
+  // Milestone 4
+  if (path === '/analytics') {
+    mustBeAdmin(u)
+    return analytics(Math.min(180, Math.max(7, num(q.get('days') ?? '30')))) as T
+  }
+  if (path === '/reports/tickets.csv') {
+    mustBeAdmin(u)
+    const head =
+      'id,title,category,request_type,status,priority,requester,assignee,created_at,sla_status'
+    const lines = tickets.map((r) =>
+      [
+        r.t.id,
+        r.t.title,
+        CATEGORIES.find((c) => c.id === r.t.category_id)?.name,
+        SUBS.find((x) => x.id === r.t.subcategory_id)?.name,
+        r.t.status,
+        r.t.priority,
+        r.t.user_id,
+        r.t.assigned_to_id,
+        r.t.created_at,
+        slaState(r.t),
+      ]
+        .map(csvCell)
+        .join(','),
+    )
+    return [head, ...lines].join('\n') as T
+  }
+  if (path === '/integrations') {
+    mustBeAdmin(u)
+    return { slack_enabled: false, webhook_events: EVENTS, allow_private_webhooks: false } as T
+  }
+  if (path === '/webhooks' && method === 'GET') {
+    mustBeAdmin(u)
+    return hooks.map(hookOut) as T
+  }
+  if (path === '/webhooks' && method === 'POST') {
+    mustBeAdmin(u)
+    need(String(body.name ?? '').trim(), 422, 'Name is required')
+    const events: string[] = body.events?.length ? body.events : ['*']
+    checkHook(body.url ?? '', events)
+    const h: Hook = {
+      id: nid(),
+      name: body.name.trim(),
+      url: body.url,
+      events,
+      active: true,
+      created_at: iso(now()),
+      secret: secretFor(),
+    }
+    hooks.push(h)
+    return { ...hookOut(h), secret: h.secret } as T
+  }
+  if ((m = match(path, '/webhooks/(\\d+)(?:/(rotate-secret|test|deliveries))?'))) {
+    mustBeAdmin(u)
+    const h = hooks.find((x) => x.id === num(m![0]))
+    need(h, 404, 'Webhook not found')
+    if (m[1] === 'deliveries')
+      return deliveries
+        .filter((d) => d.hook === h.id)
+        .reverse()
+        .slice(0, 50) as T
+    if (m[1] === 'rotate-secret') {
+      h.secret = secretFor()
+      return { ...hookOut(h), secret: h.secret } as T
+    }
+    if (m[1] === 'test') {
+      const d: Delivery = {
+        id: nid(),
+        hook: h.id,
+        event: 'ping',
+        ticket_id: null,
+        status: 'success',
+        response_code: 200,
+        attempts: 1,
+        error: null,
+        created_at: iso(now()),
+        delivered_at: iso(now()),
+      }
+      deliveries.push(d)
+      return d as T
+    }
+    if (method === 'DELETE') {
+      hooks.splice(hooks.indexOf(h), 1)
+      return undefined as T
+    }
+    if (method === 'PATCH') {
+      if (body.active !== undefined) h.active = !!body.active
+      return hookOut(h) as T
+    }
+  }
+  if ((m = match(path, '/categories/(\\d+)/subcategories')) && method === 'POST') {
+    mustBeAdmin(u)
+    const categoryId = num(m[0])
+    need(
+      CATEGORIES.some((c) => c.id === categoryId),
+      404,
+      'Category not found',
+    )
+    const name = String(body.name ?? '').trim()
+    need(name, 422, 'Name is required')
+    need(
+      !SUBS.some(
+        (x) => x.category_id === categoryId && x.name.toLowerCase() === name.toLowerCase(),
+      ),
+      409,
+      'A request type with this name exists',
+    )
+    const created: Sub = {
+      id: nextSub++,
+      category_id: categoryId,
+      name,
+      extra_fields_template: { fields: [] },
+      requires_approval: !!body.requires_approval,
+      active: true,
+    }
+    SUBS.push(created)
+    return created as T
+  }
+  if ((m = match(path, '/subcategories/(\\d+)(/fields)?'))) {
+    mustBeAdmin(u)
+    const target = SUBS.find((x) => x.id === num(m![0]))
+    need(target, 404, 'Request type not found')
+    if (m[1]) {
+      const fields: ExtraFieldDef[] = body.fields ?? []
+      need(fields.length <= 20, 422, 'At most 20 fields')
+      need(
+        new Set(fields.map((x) => x.name)).size === fields.length,
+        422,
+        'Field names must be unique',
+      )
+      fields.forEach((x) =>
+        need(
+          x.label?.trim() &&
+            /^[a-z][a-z0-9_]{0,49}$/.test(x.name) &&
+            (x.type !== 'select' || x.options?.length),
+          422,
+          'Invalid field definition',
+        ),
+      )
+      target.extra_fields_template = { fields }
+    } else {
+      if (body.name !== undefined) target.name = String(body.name).trim() || target.name
+      if (body.requires_approval !== undefined) target.requires_approval = !!body.requires_approval
+      if (body.active !== undefined) target.active = !!body.active
+    }
+    return target as T
+  }
+  if (path === '/ai/chat' && method === 'POST') {
+    const turns: { role: string; content: string }[] = body.messages ?? []
+    need(
+      turns.length && turns[0].role === 'user' && turns[turns.length - 1].role === 'user',
+      502,
+      'The conversation must start and end with a message from you',
+    )
+    const question = turns[turns.length - 1].content
+    const ts = terms(
+      turns
+        .filter((x) => x.role === 'user')
+        .map((x) => x.content)
+        .join(' '),
+    )
+    const best = articles
+      .filter((a) => a.published)
+      .map((a) => ({ a, s: score(a, ts) }))
+      .filter((x) => x.s > 0)
+      .sort((x, y) => y.s - x.s)[0]
+    if (best) {
+      const gist = best.a.body.length > 260 ? `${best.a.body.slice(0, 257)}…` : best.a.body
+      return {
+        answer: `From “${best.a.title}”: ${gist}`,
+        articles: [best.a],
+        ticket_draft: null,
+      } as T
+    }
+    const guess = aiCategorize(question.slice(0, 80), question)
+    return {
+      answer:
+        'I could not find a guide for that. I have drafted a ticket you can send to the IT team.',
+      articles: [],
+      ticket_draft: {
+        title: question.slice(0, 80),
+        description: `I need help with the following: ${question}`,
+        category_id: guess.category_id,
+        subcategory_id: guess.subcategory_id,
+        urgency: guess.urgency,
+      },
     } as T
   }
   if (path === '/ai/status') return { enabled: true, model: 'demo (simulated)' } as T
