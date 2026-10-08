@@ -1,4 +1,4 @@
-export type Role = 'user' | 'admin'
+export type Role = 'user' | 'tech' | 'admin'
 export type TicketStatus = 'open' | 'in_progress' | 'on_hold' | 'resolved' | 'closed' | 'cancelled'
 export type Urgency = 'low' | 'medium' | 'high'
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
@@ -48,6 +48,12 @@ export interface Ticket {
   resolved_at?: string | null
   closed_at?: string | null
   reopen_count: number
+  assigned_to_id?: string | null
+  assigned_at?: string | null
+  first_response_at?: string | null
+  sla_response_due?: string | null
+  sla_resolution_due?: string | null
+  sla_status: 'n/a' | 'ok' | 'at_risk' | 'breached' | 'met'
 }
 
 export interface Attachment {
@@ -106,4 +112,34 @@ export interface Dashboard {
   by_category: Record<string, number>
   by_priority: Record<string, number>
   avg_resolution_hours?: number | null
+}
+
+export interface StaffMember {
+  id: string
+  name: string
+  email: string
+  role: Role
+}
+
+export interface BulkInput {
+  ticket_ids: number[]
+  status?: TicketStatus
+  priority?: Priority
+  assignee_id?: string
+}
+
+export interface BulkResult {
+  updated: number[]
+  failed: { id: number; reason: string }[]
+}
+
+export interface Report {
+  open_count: number
+  resolved_count: number
+  avg_resolution_hours?: number | null
+  avg_first_response_hours?: number | null
+  response_sla_met_pct?: number | null
+  resolution_sla_met_pct?: number | null
+  unassigned_open: number
+  by_assignee: { assignee_id: string; open: number; resolved: number }[]
 }

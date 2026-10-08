@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Start
 
 **Project:** Internal IT Help Desk Module  
-**Status:** MVP feature-complete in development (backend API, user + admin frontend, migration, Docker files); remaining: workmate auth integration and deployment verification  
+**Status:** Phase 1 and Phase 2 feature-complete in development (tech staff, assignment, SLA, bulk actions, reports, email notifications); remaining: workmate auth/user-directory integration and deployment verification  
 **Stack:** React (frontend) + Python FastAPI (backend) + PostgreSQL (database)  
 **Documentation:** See `project_spec.md` for full requirements and architecture
 
@@ -205,13 +205,13 @@ See `project_spec.md` for full schema.
 
 All endpoints prefixed with `/api/helpdesk/`:
 
-- `GET /tickets` — List (own if user, all if admin)
+- `GET /tickets` — List (own if user, assigned + own if tech, all if admin)
 - `POST /tickets` — Create
 - `GET /tickets/{id}` — Detail
-- `PATCH /tickets/{id}` — Update status/priority (admin only)
+- `PATCH /tickets/{id}` — Update status/priority (admin, or tech on assigned tickets)
 - `POST /tickets/{id}/comments` — Add comment
 - `GET /tickets/{id}/comments` — List comments
-- `GET /tickets/{id}/history` — Audit log (admin only)
+- `GET /tickets/{id}/history` — Audit log (admin, or tech on assigned tickets)
 - `POST /tickets/{id}/attachments` — Upload file
 - `PUT /tickets/{id}/assignee` — Assign/unassign (admin)
 - `POST /tickets/bulk` — Bulk status/priority/assignee (admin)

@@ -17,6 +17,7 @@ const ticket = {
   created_at: '2026-10-07T10:00:00',
   updated_at: '2026-10-07T10:00:00',
   reopen_count: 0,
+  sla_status: 'ok',
   extra_fields: [{ field_name: 'affected_system', field_value: 'VPN' }],
   attachments: [
     { id: 1, ticket_id: 5, file_name: 'log.txt', uploaded_by_id: 'user-1', created_at: '' },

@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 const DEMO_TOKENS = [
   { token: 'demo-token-user-1', label: 'John Smith (user)' },
   { token: 'demo-token-user-2', label: 'Jane Doe (user)' },
+  { token: 'demo-token-tech-1', label: 'Tina Tech (tech)' },
   { token: 'demo-token-admin-1', label: 'Admin User (admin)' },
 ]
 

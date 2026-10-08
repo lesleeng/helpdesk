@@ -15,6 +15,7 @@ const base: Ticket = {
   created_at: '2026-10-07T10:00:00',
   updated_at: '2026-10-07T10:00:00',
   reopen_count: 0,
+  sla_status: 'ok',
 }
 
 describe('TicketList', () => {

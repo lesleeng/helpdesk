@@ -8,6 +8,7 @@ import CommentThread from '../components/CommentThread/CommentThread'
 import type { Priority, TicketStatus } from '../types'
 
 const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent']
+const UNASSIGNED = '__none__'
 
 export default function TicketDetail() {
   const id = Number(useParams().id)
@@ -17,12 +18,15 @@ export default function TicketDetail() {
   const isAdmin = user?.role === 'admin'
   const [newStatus, setNewStatus] = useState<TicketStatus | ''>('')
   const [newPriority, setNewPriority] = useState<Priority | ''>('')
+  const [newAssignee, setNewAssignee] = useState('')
 
   const ticket = useQuery({ queryKey: ['ticket', id], queryFn: () => api.getTicket(id) })
+  const canManage = isAdmin || (user?.role === 'tech' && ticket.data?.assigned_to_id === user.id)
+  const staff = useQuery({ queryKey: ['staff'], queryFn: api.staff, enabled: isAdmin })
   const history = useQuery({
     queryKey: ['history', id],
     queryFn: () => api.history(id),
-    enabled: isAdmin,
+    enabled: canManage,
   })
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['ticket', id] })
@@ -30,14 +34,19 @@ export default function TicketDetail() {
     qc.invalidateQueries({ queryKey: ['history', id] })
   }
   const update = useMutation({
-    mutationFn: () =>
-      api.updateTicket(id, {
-        status: newStatus || undefined,
-        priority: newPriority || undefined,
-      }),
+    mutationFn: async () => {
+      if (newAssignee) await api.assignTicket(id, newAssignee === UNASSIGNED ? null : newAssignee)
+      if (newStatus || newPriority) {
+        await api.updateTicket(id, {
+          status: newStatus || undefined,
+          priority: newPriority || undefined,
+        })
+      }
+    },
     onSuccess: () => {
       setNewStatus('')
       setNewPriority('')
+      setNewAssignee('')
       refresh()
     },
   })
@@ -59,6 +68,8 @@ export default function TicketDetail() {
 
   const t = ticket.data
   const canReopen = t.status === 'resolved' && t.user_id === user?.id
+  const assigneeName = (staffId?: string | null) =>
+    staffId ? (staff.data?.find((m) => m.id === staffId)?.name ?? staffId) : 'Unassigned'
 
   return (
     <>
@@ -71,6 +82,13 @@ export default function TicketDetail() {
           Urgency: {t.urgency} · Priority: {t.priority} · Created{' '}
           {new Date(t.created_at + 'Z').toLocaleString()}
         </p>
+        {t.sla_resolution_due && canManage && (
+          <p className="muted">
+            Assigned to: {assigneeName(t.assigned_to_id)} · SLA: {t.sla_status.replace(/_/g, ' ')} ·
+            Response due {new Date(t.sla_response_due + 'Z').toLocaleString()} · Resolution due{' '}
+            {new Date(t.sla_resolution_due + 'Z').toLocaleString()}
+          </p>
+        )}
         <p className="pre">{t.description}</p>
         {t.extra_fields.length > 0 && (
           <dl className="extra">
@@ -82,7 +100,7 @@ export default function TicketDetail() {
             ))}
           </dl>
         )}
-        {isAdmin && (
+        {canManage && (
           <>
             <div className="field">
               <label htmlFor="status">Status</label>
@@ -114,9 +132,29 @@ export default function TicketDetail() {
                 ))}
               </select>
             </div>
+            {isAdmin && (
+              <div className="field">
+                <label htmlFor="assignee">Assignee</label>
+                <select
+                  id="assignee"
+                  value={newAssignee}
+                  onChange={(e) => setNewAssignee(e.target.value)}
+                >
+                  <option value="">{assigneeName(t.assigned_to_id)} (current)</option>
+                  {t.assigned_to_id && <option value={UNASSIGNED}>Unassigned</option>}
+                  {staff.data
+                    ?.filter((m) => m.id !== t.assigned_to_id)
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
             <button
               onClick={() => update.mutate()}
-              disabled={update.isPending || (!newStatus && !newPriority)}
+              disabled={update.isPending || (!newStatus && !newPriority && !newAssignee)}
             >
               Update ticket
             </button>
@@ -152,7 +190,7 @@ export default function TicketDetail() {
         {upload.error && <p className="error">{(upload.error as Error).message}</p>}
       </section>
 
-      {isAdmin && (
+      {canManage && (
         <section className="card">
           <h3>History</h3>
           {history.isLoading && <p className="muted">Loading…</p>}

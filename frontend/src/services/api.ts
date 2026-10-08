@@ -1,9 +1,13 @@
 import type {
   Attachment,
+  BulkInput,
+  BulkResult,
   Category,
   Comment,
   Dashboard,
   HistoryEntry,
+  Report,
+  StaffMember,
   Priority,
   Subcategory,
   TicketStatus,
@@ -83,6 +87,12 @@ export const api = {
   listTickets: (params: {
     status?: string
     categoryId?: number
+    priority?: string
+    assigneeId?: string
+    unassigned?: boolean
+    createdFrom?: string
+    createdTo?: string
+    slaBreached?: boolean
     search?: string
     mine?: boolean
     page?: number
@@ -90,6 +100,12 @@ export const api = {
     const q = new URLSearchParams()
     if (params.status) q.set('status', params.status)
     if (params.categoryId) q.set('category_id', String(params.categoryId))
+    if (params.priority) q.set('priority', params.priority)
+    if (params.assigneeId) q.set('assignee_id', params.assigneeId)
+    if (params.unassigned) q.set('unassigned', 'true')
+    if (params.createdFrom) q.set('created_from', params.createdFrom)
+    if (params.createdTo) q.set('created_to', params.createdTo)
+    if (params.slaBreached) q.set('sla_breached', 'true')
     if (params.search) q.set('search', params.search)
     if (params.mine) q.set('mine', 'true')
     q.set('page', String(params.page ?? 1))
@@ -99,6 +115,14 @@ export const api = {
   createTicket: (data: TicketCreateInput) => request<TicketDetail>('/tickets', json(data)),
   updateTicket: (id: number, data: { status?: TicketStatus; priority?: Priority }) =>
     request<Ticket>(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  assignTicket: (id: number, assigneeId: string | null) =>
+    request<Ticket>(`/tickets/${id}/assignee`, {
+      method: 'PUT',
+      body: JSON.stringify({ assignee_id: assigneeId }),
+    }),
+  bulkUpdate: (data: BulkInput) => request<BulkResult>('/tickets/bulk', json(data)),
+  staff: () => request<StaffMember[]>('/staff'),
+  report: () => request<Report>('/reports'),
   history: (id: number) => request<HistoryEntry[]>(`/tickets/${id}/history`),
   dashboard: () => request<Dashboard>('/dashboard'),
   reopenTicket: (id: number) => request<Ticket>(`/tickets/${id}/reopen`, { method: 'POST' }),

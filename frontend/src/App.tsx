@@ -7,6 +7,7 @@ import MyTickets from './pages/MyTickets'
 import SubmitTicket from './pages/SubmitTicket'
 import TicketDetail from './pages/TicketDetail'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminReports from './pages/AdminReports'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
@@ -17,6 +18,15 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function RequireAdmin({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   return user?.role === 'admin' ? <>{children}</> : <Navigate to="/tickets" replace />
+}
+
+function RequireStaff({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  return user?.role === 'admin' || user?.role === 'tech' ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/tickets" replace />
+  )
 }
 
 export default function App() {
@@ -32,12 +42,28 @@ export default function App() {
       >
         <Route path="/tickets" element={<MyTickets />} />
         <Route path="/tickets/new" element={<SubmitTicket />} />
+        <Route
+          path="/tickets/assigned"
+          element={
+            <RequireStaff>
+              <MyTickets scope="assigned" />
+            </RequireStaff>
+          }
+        />
         <Route path="/tickets/:id" element={<TicketDetail />} />
         <Route
           path="/admin/tickets"
           element={
             <RequireAdmin>
               <MyTickets scope="all" />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <RequireAdmin>
+              <AdminReports />
             </RequireAdmin>
           }
         />

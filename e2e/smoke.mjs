@@ -61,5 +61,46 @@ await signIn('John Smith (user)')
 await page.goto(ticketUrl)
 await page.waitForSelector('text=In Progress')
 
+await signOut()
+
+// admin bulk-assigns it to tech staff
+await signIn('Admin User (admin)')
+await page.getByRole('link', { name: 'All Tickets' }).click()
+await page.getByLabel('Search tickets').fill(title)
+await page.waitForSelector(`text=${title}`)
+await page.waitForFunction(
+  () => document.querySelectorAll('[aria-label^="Select ticket #"]').length === 1,
+)
+await page.getByLabel(/Select ticket #/).check()
+await page.getByLabel('Bulk priority').selectOption('urgent')
+await page.getByLabel('Bulk assignee').selectOption({ label: 'Tina Tech' })
+await page.getByRole('button', { name: 'Apply to 1 ticket' }).click()
+await page.waitForSelector('role=cell[name="tech-1"]')
+await page.waitForSelector('role=cell[name="urgent"]')
+await signOut()
+
+// tech staff works the assigned ticket, without admin-only controls
+await signIn('Tina Tech (tech)')
+assert.equal(await page.getByRole('link', { name: 'All Tickets' }).count(), 0)
+await page.getByRole('link', { name: 'Assigned to me' }).click()
+await page.getByLabel('Search tickets').fill(title)
+await page.getByRole('link', { name: title }).click()
+assert.equal(await page.getByLabel('Assignee').count(), 0)
+await page.waitForSelector('text=SLA: ok')
+await page.getByLabel('Status').selectOption({ label: 'Resolved' })
+await page.getByRole('button', { name: 'Update ticket' }).click()
+await page.waitForSelector('text=status: in_progress → resolved')
+await page.screenshot({ path: 'tech-detail.png', fullPage: true })
+await page.goto(`${BASE}/admin/reports`)
+await page.waitForSelector('role=heading[name="My Tickets"]') // tech cannot open reports
+await signOut()
+
+// admin sees the result in the report
+await signIn('Admin User (admin)')
+await page.getByRole('link', { name: 'Reports' }).click()
+await page.waitForSelector('role=heading[name="By assignee"]')
+await page.waitForSelector('role=cell[name="Tina Tech"]')
+await page.screenshot({ path: 'admin-reports.png', fullPage: true })
+
 console.log('E2E OK; console/page errors:', problems)
 await browser.close()

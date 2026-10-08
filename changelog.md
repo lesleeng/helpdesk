@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and attachments, My Tickets (status filter, search, pagination), Ticket Detail (reopen,
   attachments, comment thread); 10 Vitest tests; verified end-to-end in a browser
 
+### Added (Milestone 2.2: Phase 2 frontend)
+- Ticket Detail: admin Assignee select, SLA line (status, response/resolution due), tech staff can
+  work tickets assigned to them (status, priority, history) but not reassign
+- All Tickets: priority, date-range, assignee and "SLA breached" filters; Assignee and SLA columns;
+  row selection with a bulk bar (status, priority, assign) that reports tickets it could not update
+- "Assigned to me" page for tech staff; admin Reports page; "Tina Tech (tech)" demo sign-in
+- 28 Vitest tests; Playwright smoke test now covers bulk assign, tech work and the report
+
 ### Added (Milestone 2.1: Phase 2 backend)
 - Tech staff role: sees and works only tickets assigned to them; admins assign (`PUT /tickets/{id}/assignee`)
 - SLA tracking: response/resolution due dates (24h/72h defaults), first-response tracking,

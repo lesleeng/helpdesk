@@ -1,8 +1,8 @@
 # Project Status - Helpdesk Module
 
 **Last Updated:** October 7, 2026  
-**Current Phase:** Phase 2 (2.1 backend done; 2.2 frontend next)  
-**Next Milestone:** 2.2 Phase 2 frontend (assignment UI, tech dashboard, bulk actions, SLA, report)
+**Current Phase:** Phase 2 feature-complete (2.1 backend, 2.2 frontend)  
+**Next Milestone:** workmate integration (auth + user directory) and deployment verification; then Phase 3
 
 > Milestones 1.1 (DB/models/mock auth), 1.2 (backend API) and 1.3 (frontend user pages) and 1.4 (admin pages, migration, Docker files) are implemented on branch
 > `claude/awesome-knuth-exyhqw`. Open items: run `docker compose up` (Docker files untested);
