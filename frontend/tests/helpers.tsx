@@ -22,9 +22,10 @@ export function mockFetch(routes: Record<string, unknown | ((init?: RequestInit)
     calls.push({ url, init })
     const key = `${init?.method ?? 'GET'} ${url.replace('/api/helpdesk', '')}`
     const hit = routes[key]
-    if (hit === undefined)
+    if (!(key in routes))
       return new Response(JSON.stringify({ detail: `no mock ${key}` }), { status: 404 })
     const body = typeof hit === 'function' ? hit(init) : hit
+    if (body === undefined) return new Response(null, { status: 204 })
     return new Response(JSON.stringify(body), { status: 200 })
   }) as typeof fetch
   return calls

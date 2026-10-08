@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useDebounced } from '../../hooks/useDebounced'
 import { api } from '../../services/api'
 import type { Urgency } from '../../types'
 import DynamicFields from './DynamicFields'
@@ -23,8 +25,25 @@ export default function TicketForm({ onCreated }: { onCreated: (id: number) => v
     enabled: categoryId !== '',
   })
 
+  const aiStatus = useQuery({ queryKey: ['ai-status'], queryFn: api.aiStatus })
+  const typed = useDebounced(`${title} ${description}`.trim())
+  const related = useQuery({
+    queryKey: ['kb-suggest', typed, categoryId],
+    queryFn: () => api.kbSuggest(typed, categoryId === '' ? undefined : categoryId),
+    enabled: typed.length >= 3,
+  })
+  const suggest = useMutation({
+    mutationFn: () => api.aiCategorize(title.trim(), description.trim()),
+    onSuccess: (r) => {
+      setCategoryId(r.category_id)
+      setSubcategoryId(r.subcategory_id ?? '')
+      setUrgency(r.urgency)
+      setExtra({})
+    },
+  })
   const selectedSub = subcategories.data?.find((s) => s.id === subcategoryId)
   const fields = selectedSub?.extra_fields_template?.fields ?? []
+  const needsApproval = selectedSub?.requires_approval === true
 
   const create = useMutation({
     mutationFn: async () => {
@@ -105,6 +124,9 @@ export default function TicketForm({ onCreated }: { onCreated: (id: number) => v
           </select>
         </div>
       )}
+      {needsApproval && (
+        <p className="muted">This request needs your manager&apos;s approval before work starts.</p>
+      )}
       <div className="field">
         <label htmlFor="title">Title</label>
         <input
@@ -124,6 +146,35 @@ export default function TicketForm({ onCreated }: { onCreated: (id: number) => v
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
+      {aiStatus.data?.enabled && (
+        <div className="field">
+          <div>
+            <button
+              type="button"
+              onClick={() => suggest.mutate()}
+              disabled={suggest.isPending || !title.trim() || !description.trim()}
+            >
+              {suggest.isPending ? 'Thinking…' : 'Suggest category'}
+            </button>
+          </div>
+          {suggest.data && <p className="muted">Suggested: {suggest.data.reasoning}</p>}
+          {suggest.error && <p className="error">{(suggest.error as Error).message}</p>}
+        </div>
+      )}
+      {related.data && related.data.length > 0 && (
+        <div className="field">
+          <span>Related articles</span>
+          <ul>
+            {related.data.map((a) => (
+              <li key={a.id}>
+                <Link to={`/kb/${a.id}`} target="_blank" rel="noreferrer">
+                  {a.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="field">
         <label htmlFor="urgency">Urgency</label>
         <select

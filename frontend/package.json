@@ -10,7 +10,9 @@
     "test": "vitest run",
     "lint": "eslint src tests --max-warnings 0",
     "type-check": "tsc --noEmit",
-    "format": "prettier --write src tests"
+    "format": "prettier --write src tests",
+    "build:demo": "tsc --noEmit && VITE_DEMO=true vite build --base=./ --outDir dist-demo",
+    "preview:demo": "npm run build:demo && vite preview --outDir dist-demo --port 4173"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.1",

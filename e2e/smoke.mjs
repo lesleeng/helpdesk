@@ -14,7 +14,7 @@ async function signIn(label) {
   await page.goto(`${BASE}/login`)
   await page.getByLabel('Demo user').selectOption({ label })
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await page.waitForSelector(`text=${label}`)
+  await page.getByRole('button', { name: 'Sign out' }).waitFor()
 }
 const signOut = () => page.getByRole('button', { name: 'Sign out' }).click()
 
@@ -101,6 +101,48 @@ await page.getByRole('link', { name: 'Reports' }).click()
 await page.waitForSelector('role=heading[name="By assignee"]')
 await page.waitForSelector('role=cell[name="Tina Tech"]')
 await page.screenshot({ path: 'admin-reports.png', fullPage: true })
+
+await signOut()
+
+// Phase 3: access request needs manager approval
+const accessTitle = `E2E access ${Date.now()}`
+await signIn('John Smith (user)')
+await page.getByRole('link', { name: 'New Ticket' }).click()
+await page.getByLabel('Category').selectOption({ label: 'Service Request' })
+await page.getByLabel('Request type').selectOption({ label: 'Access request' })
+await page.waitForSelector("text=needs your manager's approval")
+await page.getByLabel('Title').fill(accessTitle)
+await page.getByLabel('Description').fill('Read access to the Finance share')
+await page.getByRole('button', { name: 'Submit ticket' }).click()
+await page.waitForURL(/\/tickets\/\d+$/)
+await page.waitForSelector('text=Approval: pending')
+await signOut()
+
+await signIn('Maria Manager (user, approves requests)')
+await page.getByRole('link', { name: 'Approvals' }).click()
+await page.getByRole('link', { name: accessTitle }).click()
+await page.getByLabel('Approval comment').fill('Approved for quarter end')
+await page.getByRole('button', { name: 'Approve' }).click()
+await page.waitForSelector('text=Approval: approved')
+await signOut()
+
+// Phase 3: admin publishes a knowledge article, requester finds it
+const kbTitle = `E2E guide ${Date.now()}`
+await signIn('Admin User (admin)')
+await page.getByRole('link', { name: 'Knowledge Base' }).click()
+await page.getByRole('link', { name: 'New article' }).click()
+await page.getByLabel('Title').fill(kbTitle)
+await page.getByLabel('Body').fill('Restart the client and sign in again.')
+await page.getByLabel('Published').check()
+await page.getByRole('button', { name: 'Save article' }).click()
+await page.waitForSelector(`role=heading[name="${kbTitle}"]`)
+await signOut()
+
+await signIn('John Smith (user)')
+await page.getByRole('link', { name: 'Knowledge Base' }).click()
+await page.getByLabel('Search articles').fill(kbTitle)
+await page.getByRole('link', { name: kbTitle }).waitFor()
+assert.equal(await page.getByRole('link', { name: 'New article' }).count(), 0)
 
 console.log('E2E OK; console/page errors:', problems)
 await browser.close()

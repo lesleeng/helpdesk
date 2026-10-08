@@ -31,6 +31,7 @@ export interface Subcategory {
   name: string
   description?: string | null
   extra_fields_template?: { fields?: ExtraFieldDef[] } | null
+  requires_approval?: boolean
 }
 
 export interface Ticket {
@@ -54,6 +55,10 @@ export interface Ticket {
   sla_response_due?: string | null
   sla_resolution_due?: string | null
   sla_status: 'n/a' | 'ok' | 'at_risk' | 'breached' | 'met'
+  approval_status?: 'pending' | 'approved' | 'rejected' | null
+  approver_id?: string | null
+  approval_decided_by_id?: string | null
+  approval_comment?: string | null
 }
 
 export interface Attachment {
@@ -65,9 +70,16 @@ export interface Attachment {
   created_at: string
 }
 
+export interface Feedback {
+  rating: number
+  comment?: string | null
+  created_at: string
+}
+
 export interface TicketDetail extends Ticket {
   extra_fields: { field_name: string; field_value?: string | null }[]
   attachments: Attachment[]
+  feedback?: Feedback | null
 }
 
 export interface TicketList {
@@ -141,5 +153,68 @@ export interface Report {
   response_sla_met_pct?: number | null
   resolution_sla_met_pct?: number | null
   unassigned_open: number
+  pending_approval?: number
+  feedback_count?: number
+  avg_satisfaction?: number | null
   by_assignee: { assignee_id: string; open: number; resolved: number }[]
+}
+
+export interface KbArticle {
+  id: number
+  title: string
+  body: string
+  tags?: string | null
+  category_id?: number | null
+  published: boolean
+  created_by_id: string
+  created_at: string
+  updated_at: string
+}
+
+export interface KbList {
+  items: KbArticle[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface KbArticleInput {
+  title: string
+  body: string
+  tags?: string | null
+  category_id?: number | null
+  published: boolean
+}
+
+export interface SlaRule {
+  category_id: number
+  category_name: string
+  response_hours: number
+  resolution_hours: number
+  custom: boolean
+}
+
+export interface AiStatus {
+  enabled: boolean
+  model: string
+}
+
+export interface AiCategorization {
+  category_id: number
+  subcategory_id?: number | null
+  urgency: Urgency
+  reasoning: string
+}
+
+export interface AiReply {
+  draft: string
+  used_article_ids: number[]
+  articles: KbArticle[]
+}
+
+export interface Duplicate {
+  id: number
+  title: string
+  status: string
+  score: number
 }

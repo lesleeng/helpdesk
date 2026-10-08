@@ -8,6 +8,12 @@ import SubmitTicket from './pages/SubmitTicket'
 import TicketDetail from './pages/TicketDetail'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminReports from './pages/AdminReports'
+import Approvals from './pages/Approvals'
+import KnowledgeArticle from './pages/KnowledgeArticle'
+import KnowledgeArticleForm from './pages/KnowledgeArticleForm'
+import KnowledgeBase from './pages/KnowledgeBase'
+import SlaRules from './pages/SlaRules'
+import { homePath } from './services/home'
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth()
@@ -27,6 +33,11 @@ function RequireStaff({ children }: { children: ReactNode }) {
   ) : (
     <Navigate to="/tickets" replace />
   )
+}
+
+function Home() {
+  const { user } = useAuth()
+  return <Navigate to={homePath(user?.role)} replace />
 }
 
 export default function App() {
@@ -59,6 +70,33 @@ export default function App() {
             </RequireAdmin>
           }
         />
+        <Route path="/kb" element={<KnowledgeBase />} />
+        <Route
+          path="/kb/new"
+          element={
+            <RequireAdmin>
+              <KnowledgeArticleForm />
+            </RequireAdmin>
+          }
+        />
+        <Route path="/kb/:id" element={<KnowledgeArticle />} />
+        <Route
+          path="/kb/:id/edit"
+          element={
+            <RequireAdmin>
+              <KnowledgeArticleForm />
+            </RequireAdmin>
+          }
+        />
+        <Route path="/approvals" element={<Approvals />} />
+        <Route
+          path="/admin/sla"
+          element={
+            <RequireAdmin>
+              <SlaRules />
+            </RequireAdmin>
+          }
+        />
         <Route
           path="/admin/reports"
           element={
@@ -76,7 +114,14 @@ export default function App() {
           }
         />
       </Route>
-      <Route path="*" element={<Navigate to="/tickets" replace />} />
+      <Route
+        path="*"
+        element={
+          <RequireAuth>
+            <Home />
+          </RequireAuth>
+        }
+      />
     </Routes>
   )
 }
