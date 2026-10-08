@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Start
 
 **Project:** Internal IT Help Desk Module  
-**Status:** Phase 1 and Phase 2 feature-complete in development (tech staff, assignment, SLA, bulk actions, reports, email notifications); remaining: workmate auth/user-directory integration and deployment verification  
+**Status:** Phase 1 and 2 complete; Phase 3 backend done (knowledge base, manager approvals, feedback survey, per-category SLA, Claude assistance); Phase 3 frontend next; remaining: workmate auth/user-directory integration and deployment verification  
 **Stack:** React (frontend) + Python FastAPI (backend) + PostgreSQL (database)  
 **Documentation:** See `project_spec.md` for full requirements and architecture
 
@@ -194,7 +194,7 @@ See `project_spec.md` for full schema.
 1. Frontend passes auth token (JWT/session) from workmate's system.
 2. Backend validates token against workmate's auth service.
 3. Backend queries workmate's `users` table to populate user info on tickets.
-4. Role check: user, tech (assigned tickets only), admin (everything). Staff names/emails come from `app/services/directory.py`; production mode is not integrated yet (no emails, `/staff` returns 501).
+4. Role check: user, tech (assigned tickets only), admin (everything); plus the requester's manager as approver for access/licence requests. Names, emails, staff list and managers come from `app/services/directory.py`; production mode is not integrated yet (no emails, no managers, `/staff` returns 501).
 
 **Environment variables:**
 - `WORKMATE_AUTH_URL` — Where to validate tokens
@@ -216,6 +216,11 @@ All endpoints prefixed with `/api/helpdesk/`:
 - `PUT /tickets/{id}/assignee` — Assign/unassign (admin)
 - `POST /tickets/bulk` — Bulk status/priority/assignee (admin)
 - `GET /staff`, `GET /reports` — Staff directory, SLA/workload report (admin)
+- `GET/POST/PATCH/DELETE /kb/articles`, `GET /kb/suggest`, `GET/POST/DELETE /tickets/{id}/kb` — Knowledge base and ticket links (write: admin; link: staff on the ticket)
+- `GET /approvals`, `POST /tickets/{id}/approval` — Manager approval (approve/reject)
+- `POST /tickets/{id}/feedback` — Satisfaction survey (submitter, resolved/closed tickets)
+- `GET/PUT/DELETE /sla-rules[/{category_id}]` — Per-category SLA targets (admin)
+- `GET /ai/status`, `POST /ai/categorize`, `POST /tickets/{id}/ai/suggest-response`, `GET /tickets/{id}/duplicates` — AI assistance (advisory; needs `ENABLE_AI_FEATURES=true` + `ANTHROPIC_API_KEY`)
 - `GET /tickets` filters: `status, category_id, priority, search, mine, assignee_id, unassigned, created_from, created_to, sla_breached`
 
 See `project_spec.md` API section for complete list.

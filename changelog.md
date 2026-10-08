@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and attachments, My Tickets (status filter, search, pagination), Ticket Detail (reopen,
   attachments, comment thread); 10 Vitest tests; verified end-to-end in a browser
 
+### Added (Milestone 3.1: Phase 3 backend)
+- Knowledge base: articles (draft/published), keyword search with ranking, suggestions, links to tickets
+- Manager approval for access/licence requests: tickets wait in `pending` until the requester's
+  manager (or an admin) approves; rejection cancels the ticket; self-approval is blocked
+- Post-resolution feedback survey (1-5 + comment) with satisfaction in the report
+- Custom SLA targets per category (admin), used when tickets are created
+- Claude assistance (off by default): category/urgency suggestion for new tickets and a drafted
+  reply grounded in knowledge base articles for staff; local duplicate-ticket detection
+- Migration 0003 (verified on PostgreSQL 16); 93 pytest tests, ~96% coverage
+
 ### Added (Milestone 2.2: Phase 2 frontend)
 - Ticket Detail: admin Assignee select, SLA line (status, response/resolution due), tech staff can
   work tickets assigned to them (status, priority, history) but not reassign

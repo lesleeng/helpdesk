@@ -55,6 +55,11 @@ def seeded(db):
 
 
 @pytest.fixture
+def manager_headers():
+    return {"Authorization": "Bearer demo-token-manager-1"}
+
+
+@pytest.fixture
 def tech_headers():
     return {"Authorization": "Bearer demo-token-tech-1"}
 

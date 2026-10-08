@@ -63,6 +63,11 @@ class Ticket(Base):
     first_response_at = Column(DateTime, nullable=True)
     sla_response_due = Column(DateTime, nullable=True)
     sla_resolution_due = Column(DateTime, nullable=True)
+    approval_status = Column(String(20), nullable=True)  # pending | approved | rejected
+    approver_id = Column(String(100), nullable=True, index=True)
+    approval_decided_by_id = Column(String(100), nullable=True)
+    approval_decided_at = Column(DateTime, nullable=True)
+    approval_comment = Column(Text, nullable=True)
 
     category = relationship("TicketCategory", back_populates="tickets")
     subcategory = relationship("TicketSubcategory", back_populates="tickets")
@@ -73,6 +78,9 @@ class Ticket(Base):
     )
     extra_fields = relationship(
         "TicketExtraFields", back_populates="ticket", cascade="all, delete-orphan"
+    )
+    feedback = relationship(
+        "TicketFeedback", back_populates="ticket", uselist=False, cascade="all, delete-orphan"
     )
 
     def __repr__(self):

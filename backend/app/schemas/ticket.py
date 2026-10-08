@@ -1,6 +1,6 @@
 """Pydantic schemas for tickets, comments, history, attachments, categories."""
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,6 +17,7 @@ class SubcategoryOut(ORMModel):
     name: str
     description: Optional[str] = None
     extra_fields_template: Optional[dict] = None
+    requires_approval: bool = False
 
 
 class CategoryOut(ORMModel):
@@ -102,11 +103,23 @@ class TicketOut(ORMModel):
     sla_response_due: Optional[datetime] = None
     sla_resolution_due: Optional[datetime] = None
     sla_status: str = "n/a"
+    approval_status: Optional[str] = None
+    approver_id: Optional[str] = None
+    approval_decided_by_id: Optional[str] = None
+    approval_decided_at: Optional[datetime] = None
+    approval_comment: Optional[str] = None
+
+
+class FeedbackOut(ORMModel):
+    rating: int
+    comment: Optional[str] = None
+    created_at: datetime
 
 
 class TicketDetailOut(TicketOut):
     extra_fields: List[ExtraFieldOut] = []
     attachments: List[AttachmentOut] = []
+    feedback: Optional[FeedbackOut] = None
 
 
 class TicketListOut(BaseModel):
@@ -166,4 +179,99 @@ class ReportOut(BaseModel):
     response_sla_met_pct: Optional[float] = None
     resolution_sla_met_pct: Optional[float] = None
     unassigned_open: int
+    pending_approval: int = 0
+    feedback_count: int = 0
+    avg_satisfaction: Optional[float] = None
     by_assignee: List[AssigneeLoad]
+
+
+class KbArticleCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1)
+    tags: Optional[str] = Field(default=None, max_length=300)
+    category_id: Optional[int] = None
+    published: bool = False
+
+
+class KbArticleUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    body: Optional[str] = Field(default=None, min_length=1)
+    tags: Optional[str] = Field(default=None, max_length=300)
+    category_id: Optional[int] = None
+    published: Optional[bool] = None
+
+
+class KbArticleOut(ORMModel):
+    id: int
+    title: str
+    body: str
+    tags: Optional[str] = None
+    category_id: Optional[int] = None
+    published: bool
+    created_by_id: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class KbListOut(BaseModel):
+    items: List[KbArticleOut]
+    total: int
+    page: int
+    page_size: int
+
+
+class KbLinkRequest(BaseModel):
+    article_id: int
+
+
+class ApprovalDecision(BaseModel):
+    decision: Literal["approve", "reject"]
+    comment: Optional[str] = Field(default=None, max_length=1000)
+
+
+class FeedbackIn(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    comment: Optional[str] = Field(default=None, max_length=2000)
+
+
+class SlaRuleIn(BaseModel):
+    response_hours: int = Field(ge=1, le=24 * 90)
+    resolution_hours: int = Field(ge=1, le=24 * 365)
+
+
+class SlaRuleOut(BaseModel):
+    category_id: int
+    category_name: str
+    response_hours: int
+    resolution_hours: int
+    custom: bool
+
+
+class AiStatusOut(BaseModel):
+    enabled: bool
+    model: str
+
+
+class AiCategorizeIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(min_length=1, max_length=5000)
+
+
+class AiCategorizeOut(BaseModel):
+    category_id: int
+    subcategory_id: Optional[int] = None
+    urgency: Literal["low", "medium", "high"]
+    reasoning: str
+
+
+class AiReplyOut(BaseModel):
+    draft: str
+    used_article_ids: List[int]
+    articles: List[KbArticleOut]
+
+
+class DuplicateOut(BaseModel):
+    id: int
+    title: str
+    status: str
+    score: float

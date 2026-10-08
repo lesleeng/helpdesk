@@ -24,3 +24,10 @@ def list_staff() -> List[Dict[str, Any]]:
         status.HTTP_501_NOT_IMPLEMENTED,
         "Staff directory is not integrated with the main system yet",
     )
+
+
+def get_manager(user_id: str) -> Optional[Dict[str, Any]]:
+    """The person who approves this user's access/license requests (None if unknown)."""
+    user = get_user(user_id)
+    manager_id = user.get("manager_id") if user else None
+    return get_user(manager_id) if manager_id else None

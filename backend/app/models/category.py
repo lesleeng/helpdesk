@@ -3,6 +3,7 @@ Ticket category and subcategory models.
 Defines the 4 main request categories and 28 subcategories.
 """
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, JSON, Boolean, DateTime
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -46,6 +47,7 @@ class TicketSubcategory(Base):
     order = Column(Integer, default=0)
     active = Column(Boolean, default=True)
     extra_fields_template = Column(JSON, default=dict)  # Template for extra fields
+    requires_approval = Column(Boolean, default=False, server_default=sa_false(), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

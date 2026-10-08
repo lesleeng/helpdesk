@@ -79,3 +79,18 @@ def assigned(bg: BackgroundTasks, ticket: Ticket, actor: Dict[str, Any]) -> None
     subject = f"[Help Desk] Ticket #{ticket.id} assigned to you"
     body = f"{ticket.title}\n{_link(ticket)}"
     _queue(bg, [ticket.assigned_to_id], subject, body, exclude=actor["id"])
+
+
+def approval_requested(bg: BackgroundTasks, ticket: Ticket) -> None:
+    subject = f"[Help Desk] Approval needed for ticket #{ticket.id}"
+    body = f"{ticket.title}\nThis request needs your approval.\n{_link(ticket)}"
+    approvers = [ticket.approver_id] if ticket.approver_id else _admin_ids()
+    _queue(bg, approvers, subject, body)
+
+
+def approval_decided(bg: BackgroundTasks, ticket: Ticket, actor: Dict[str, Any]) -> None:
+    subject = f"[Help Desk] Ticket #{ticket.id} was {ticket.approval_status}"
+    body = f"Your request was {ticket.approval_status}.\n{_link(ticket)}"
+    if ticket.approval_comment:
+        body += f"\nComment: {ticket.approval_comment}"
+    _queue(bg, [ticket.user_id], subject, body, exclude=actor["id"])

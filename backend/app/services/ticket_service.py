@@ -15,12 +15,13 @@ from app.models.ticket import (
     Ticket,
     TicketAttachment,
     TicketComment,
-    TicketHistory,
     TicketPriority,
     TicketStatus,
 )
 from app.schemas.ticket import BulkRequest, CommentCreate, TicketCreate
-from app.services import directory
+from app.services import approval_service, directory, feedback_service, sla_service
+from app.services.ticket_core import is_admin
+from app.services.ticket_core import log_history as _log
 
 S = TicketStatus
 
@@ -34,10 +35,6 @@ ADMIN_TRANSITIONS = {
 }
 
 
-def is_admin(user: Dict[str, Any]) -> bool:
-    return user.get("role") == "admin"
-
-
 def is_staff(user: Dict[str, Any]) -> bool:
     return user.get("role") in ("admin", "tech")
 
@@ -47,24 +44,13 @@ def can_manage(ticket: Ticket, user: Dict[str, Any]) -> bool:
     return is_admin(user) or (user.get("role") == "tech" and ticket.assigned_to_id == user["id"])
 
 
-def _log(db: Session, ticket_id: int, user_id: str, field: str, old: Any, new: Any, kind: str):
-    db.add(
-        TicketHistory(
-            ticket_id=ticket_id,
-            changed_by_id=user_id,
-            field_name=field,
-            old_value=None if old is None else str(getattr(old, "value", old)),
-            new_value=None if new is None else str(getattr(new, "value", new)),
-            change_type=kind,
-        )
-    )
-
-
 def get_ticket_for_user(db: Session, ticket_id: int, user: Dict[str, Any]) -> Ticket:
     """Fetch a ticket the user may view: own tickets, plus assigned ones for tech staff, all for
     admins. 404 otherwise, to avoid leaking IDs."""
     ticket = db.get(Ticket, ticket_id)
-    if ticket is None or not (ticket.user_id == user["id"] or can_manage(ticket, user)):
+    if ticket is None or not (
+        ticket.user_id == user["id"] or ticket.approver_id == user["id"] or can_manage(ticket, user)
+    ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ticket not found")
     return ticket
 
@@ -80,6 +66,7 @@ def get_ticket_for_staff(db: Session, ticket_id: int, user: Dict[str, Any]) -> T
 def create_ticket(db: Session, data: TicketCreate, user: Dict[str, Any]) -> Ticket:
     if db.get(TicketCategory, data.category_id) is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unknown category")
+    sub = None
     if data.subcategory_id is not None:
         sub = db.get(TicketSubcategory, data.subcategory_id)
         if sub is None or sub.category_id != data.category_id:
@@ -88,10 +75,11 @@ def create_ticket(db: Session, data: TicketCreate, user: Dict[str, Any]) -> Tick
             )
 
     now = datetime.utcnow()
+    response_hours, resolution_hours = sla_service.sla_hours(db, data.category_id)
     ticket = Ticket(
         created_at=now,
-        sla_response_due=now + timedelta(hours=settings.SLA_RESPONSE_TIME_HOURS),
-        sla_resolution_due=now + timedelta(hours=settings.SLA_RESOLUTION_TIME_HOURS),
+        sla_response_due=now + timedelta(hours=response_hours),
+        sla_resolution_due=now + timedelta(hours=resolution_hours),
         title=data.title,
         description=data.description,
         user_id=user["id"],
@@ -112,6 +100,8 @@ def create_ticket(db: Session, data: TicketCreate, user: Dict[str, Any]) -> Tick
             )
         )
     _log(db, ticket.id, user["id"], "status", None, TicketStatus.OPEN, "created")
+    if data.subcategory_id is not None and sub.requires_approval:
+        approval_service.request_approval(db, ticket)
     db.commit()
     db.refresh(ticket)
     return ticket
@@ -189,6 +179,8 @@ def update_ticket(
                 status.HTTP_409_CONFLICT,
                 f"Cannot move ticket from {ticket.status.value} to {new_status.value}",
             )
+        if ticket.approval_status == "pending" and new_status != TicketStatus.CANCELLED:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Waiting for manager approval")
         _log(db, ticket.id, admin["id"], "status", ticket.status, new_status, "status_change")
         now = datetime.utcnow()
         if ticket.first_response_at is None and ticket.user_id != admin["id"]:
@@ -339,6 +331,8 @@ def report_stats(db: Session) -> Dict[str, Any]:
             len(finished),
         ),
         "unassigned_open": sum(1 for t in open_ if t.assigned_to_id is None),
+        "pending_approval": approval_service.count_pending(db),
+        **feedback_service.stats(db),
         "by_assignee": [
             {"assignee_id": k, **v} for k, v in sorted(load.items(), key=lambda kv: kv[0])
         ],

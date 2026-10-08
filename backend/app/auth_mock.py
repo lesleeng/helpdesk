@@ -13,12 +13,21 @@ DEMO_USERS = {
         "email": "john.smith@company.com",
         "department": "IT Support",
         "role": "user",
+        "manager_id": "manager-1",
     },
     "demo-token-user-2": {
         "id": "user-2",
         "name": "Jane Doe",
         "email": "jane.doe@company.com",
         "department": "Finance",
+        "role": "user",
+        "manager_id": "manager-1",
+    },
+    "demo-token-manager-1": {
+        "id": "manager-1",
+        "name": "Maria Manager",
+        "email": "maria.manager@company.com",
+        "department": "Operations",
         "role": "user",
     },
     "demo-token-tech-1": {

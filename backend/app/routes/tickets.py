@@ -70,6 +70,8 @@ def create_ticket(
 ):
     ticket = svc.create_ticket(db, data, user)
     notify.ticket_created(background, ticket)
+    if ticket.approval_status == "pending":
+        notify.approval_requested(background, ticket)
     return ticket
 
 

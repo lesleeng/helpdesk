@@ -33,6 +33,8 @@ SEED = {
     "HR-Initiated": ["Employee onboarding", "Offboarding", "Department transfer"],
 }
 
+APPROVAL_REQUIRED = {"Access request", "License assignment"}
+
 T = "text"
 LONG = "textarea"
 DATE = "date"
@@ -96,10 +98,14 @@ def seed_categories(db: Session) -> None:
                         name=sub,
                         order=i,
                         extra_fields_template={"fields": EXTRA_FIELDS[cat_name]},
+                        requires_approval=sub in APPROVAL_REQUIRED,
                     )
                 )
-            elif not existing[sub].extra_fields_template:
-                existing[sub].extra_fields_template = {"fields": EXTRA_FIELDS[cat_name]}
+            else:
+                if not existing[sub].extra_fields_template:
+                    existing[sub].extra_fields_template = {"fields": EXTRA_FIELDS[cat_name]}
+                if sub in APPROVAL_REQUIRED:
+                    existing[sub].requires_approval = True
     db.commit()
 
 

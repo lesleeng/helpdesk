@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     SMTP_FROM_ADDRESS: str = os.getenv("SMTP_FROM_ADDRESS", "helpdesk@localhost")
     APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:5173")
 
+    # AI (Claude API) - needs ENABLE_AI_FEATURES=true and an API key
+    ENABLE_AI_FEATURES: bool = os.getenv("ENABLE_AI_FEATURES", "false").lower() == "true"
+    ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
+    AI_MODEL: str = os.getenv("AI_MODEL", "claude-opus-5-5")
+    AI_MAX_TOKENS: int = int(os.getenv("AI_MAX_TOKENS", "4096"))
+    AI_RATE_LIMIT_PER_HOUR: int = int(os.getenv("AI_RATE_LIMIT_PER_HOUR", "30"))
+
     # Ticket Settings
     DEFAULT_TICKET_STATUS: str = "open"
     REOPEN_WINDOW_DAYS: int = 7
