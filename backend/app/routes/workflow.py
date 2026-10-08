@@ -15,6 +15,7 @@ from app.schemas.ticket import (
     TicketOut,
 )
 from app.services import approval_service, feedback_service, sla_service
+from app.services import event_service as events
 from app.services import notification_service as notify
 from app.services import ticket_service as svc
 
@@ -39,6 +40,9 @@ def decide_approval(
     ticket = svc.get_ticket_for_user(db, ticket_id, user)
     ticket = approval_service.decide(db, ticket, user, data.decision == "approve", data.comment)
     notify.approval_decided(background, ticket, user)
+    events.emit(
+        db, background, "ticket.approval_decided", ticket, user, {"decision": data.decision}
+    )
     return ticket
 
 
@@ -48,11 +52,14 @@ def decide_approval(
 def submit_feedback(
     ticket_id: int,
     data: FeedbackIn,
+    background: BackgroundTasks,
     db: Session = Depends(get_db),
     user: Dict[str, Any] = Depends(get_current_user),
 ):
     ticket = svc.get_ticket_for_user(db, ticket_id, user)
-    return feedback_service.submit(db, ticket, user, data.rating, data.comment)
+    feedback = feedback_service.submit(db, ticket, user, data.rating, data.comment)
+    events.emit(db, background, "ticket.feedback_submitted", ticket, user, {"rating": data.rating})
+    return feedback
 
 
 @router.get("/sla-rules", response_model=List[SlaRuleOut])

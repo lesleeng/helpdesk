@@ -5,12 +5,15 @@ from app.models.category import TicketCategory, TicketSubcategory, TicketExtraFi
 from app.models.feedback import TicketFeedback
 from app.models.kb import KbArticle, TicketKbLink
 from app.models.sla import SlaRule
+from app.models.webhook import Webhook, WebhookDelivery
 
 __all__ = [
     "KbArticle",
     "SlaRule",
     "TicketFeedback",
     "TicketKbLink",
+    "Webhook",
+    "WebhookDelivery",
     "Ticket",
     "TicketComment",
     "TicketHistory",

@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     AI_MAX_TOKENS: int = int(os.getenv("AI_MAX_TOKENS", "4096"))
     AI_RATE_LIMIT_PER_HOUR: int = int(os.getenv("AI_RATE_LIMIT_PER_HOUR", "30"))
 
+    # Integrations
+    ENABLE_SLACK_NOTIFICATIONS: bool = (
+        os.getenv("ENABLE_SLACK_NOTIFICATIONS", "false").lower() == "true"
+    )
+    SLACK_WEBHOOK_URL: Optional[str] = os.getenv("SLACK_WEBHOOK_URL")
+    WEBHOOKS_ALLOW_PRIVATE: bool = os.getenv("WEBHOOKS_ALLOW_PRIVATE", "false").lower() == "true"
+
     # Ticket Settings
     DEFAULT_TICKET_STATUS: str = "open"
     REOPEN_WINDOW_DAYS: int = 7
